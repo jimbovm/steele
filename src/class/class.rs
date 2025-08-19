@@ -4,24 +4,37 @@ use binrw::binrw;
 
 use crate::class::{constant_pool, field::Field};
 
+/// A representation of a binary Java class file (JVMS17 4.1)
 #[binrw]
 #[brw(big)]
 #[bw(magic = 0xCAFEBABEu32)]
 pub struct RawClass {
+	/// The magic number 0xCAFEBABEu32.
 	pub magic: u32,
+	/// The format minor version.
 	pub minor_version: u16,
+	/// The format major version.
 	pub major_version: u16,
+	/// The number of constant pool items.
 	pub constant_pool_count: u16,
 	#[br(count = (constant_pool_count - 2) as u16)]
+	/// The constant pool (JVMS17 4.4).
 	pub constant_pool: Vec<constant_pool::Item>,
+	/// The access and modifier flags for the class.
 	pub access_flags: u16,
+	/// The constant pool index giving this class's name.
 	pub this_class: u16,
+	/// The constant pool index giving this class's superclass's name.
 	pub super_class: u16,
+	/// The number of interface entries.
 	pub interfaces_count: u16,
+	/// Constant pool index numbers giving superinterfaces of this class/interface.
 	#[br(count = interfaces_count as u16)]
 	pub interfaces: Vec<u16>,
+	// The number of field entries.
 	pub fields_count: u16,
 	#[br(count = fields_count as u16)]
+	// An array of field info structures (JVMS17 4.5).
 	pub fields: Vec<Field>,
 	// pub method_count: u16,
 	// #[br(count = method_count as u16)]
@@ -31,6 +44,11 @@ pub struct RawClass {
 	// pub attributes: Vec<Attribute>,
 }
 
+/// Converts a raw constant pool to canonical form.
+/// 
+/// Due to a JVM design mistake a double or long stored in the constant pool table "invalidates" the next index.
+/// For instance if a double or long is stored as constant pool entry number 10, counting from 1, then the
+/// index number number used for the next entry will be 12, and index number 11 will be invalid (JVMS17 4.4.5).
 fn canonical_constant_pool_from(raw_constant_pool: Vec<constant_pool::Item>) -> BTreeMap<u16, constant_pool::Item> {
 	let mut canonical_constant_pool: BTreeMap<u16, constant_pool::Item> = BTreeMap::new();
 	let mut index: u16 = 1;
@@ -56,7 +74,7 @@ use binrw::BinReaderExt;
 use crate::class::{
 	access, class::{canonical_constant_pool_from,
 	RawClass,
-}, constant_pool, field::Field};
+}, constant_pool};
 
 const CLASS_FILE_PATH: &str = "tests/resources/Sample.class";
 	
@@ -103,8 +121,8 @@ const CLASS_FILE_PATH: &str = "tests/resources/Sample.class";
 	#[test]
 	fn test_access_flags() {
 		let clazz = get_class();
-		assert!(clazz.access_flags & (access::ClassAccessFlags::Public as u16) == (access::ClassAccessFlags::Public as u16));
-		assert!(clazz.access_flags & (access::ClassAccessFlags::Super as u16) == (access::ClassAccessFlags::Super as u16));
+		assert!(clazz.access_flags & (access::ClassAccessPropertyFlags::Public as u16) == (access::ClassAccessPropertyFlags::Public as u16));
+		assert!(clazz.access_flags & (access::ClassAccessPropertyFlags::Super as u16) == (access::ClassAccessPropertyFlags::Super as u16));
 	}
 
 	#[test]

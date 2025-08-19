@@ -1,5 +1,7 @@
 use binrw::binrw;
 
+
+/// An implementation of a field_info structure (JVMS17 4.5)
 #[binrw]
 #[brw(big)]
 #[derive(PartialEq, Debug)]
@@ -12,6 +14,7 @@ pub struct Field {
 	pub attributes: Vec<ConstantValue>,
 }
 
+// An implementation of a ConstantValue attribute (JVMS17 4.7.2)
 #[binrw]
 #[brw(big)]
 #[derive(PartialEq, Debug)]
