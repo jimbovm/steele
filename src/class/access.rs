@@ -1,4 +1,5 @@
 #[repr(u16)]
+#[derive(PartialEq, Debug)]
 pub enum ClassAccessFlags {
 	Public = 0x0001,
 	Final = 0x0010,
@@ -8,6 +9,7 @@ pub enum ClassAccessFlags {
 }
 
 #[repr(u16)]
+#[derive(PartialEq, Debug)]
 pub enum MethodAccessPropertyFlags {
 	Public = 0x0001,
 	Private = 0x0002,
@@ -23,11 +25,13 @@ pub enum MethodAccessPropertyFlags {
 }
 
 #[repr(u16)]
+#[derive(PartialEq, Debug)]
 pub enum FieldAccessPropertyFlags {
 	Public = 0x0001,
 	Private = 0x0002,
 	Protected = 0x0004,
 	Static = 0x0008,
+	Final = 0x0010,
 	Synchronized = 0x0020,
 	Volatile = 0x0040,
 	Transient = 0x0080,
