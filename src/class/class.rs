@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use binrw::binrw;
 
 use crate::class::constant_pool;
@@ -5,11 +7,10 @@ use crate::class::constant_pool;
 #[binrw]
 #[brw(big)]
 #[bw(magic = 0xCAFEBABEu32)]
-pub struct Class {
+pub struct RawClass {
 	pub magic: u32,
 	pub minor_version: u16,
 	pub major_version: u16,
-	#[bw(try_calc(u16::try_from(constant_pool.len())))]
 	pub constant_pool_count: u16,
 	#[br(count = (constant_pool_count - 2) as u16)]
 	pub constant_pool: Vec<constant_pool::Item>,
@@ -19,29 +20,40 @@ pub struct Class {
 	pub interfaces_count: u16
 }
 
-#[repr(u16)]
-pub enum AccessFlags {
-	Public = 0x0001,
-	Final = 0x0010,
-	Super = 0x0020,
-	Interface = 0x2000,
-	Abstract = 0x4000,
+fn canonical_constant_pool_from(raw_constant_pool: Vec<constant_pool::Item>) -> BTreeMap<u16, constant_pool::Item> {
+	let mut canonical_constant_pool: BTreeMap<u16, constant_pool::Item> = BTreeMap::new();
+	let mut index: u16 = 1;
+	for item in raw_constant_pool.into_iter() {
+		let increment: u16;
+		match item {
+			constant_pool::Item::Double(ref _d) => { increment = 2; },
+			constant_pool::Item::Long(ref _l) => { increment = 2; },
+			_ => { increment = 1; }
+		}
+		canonical_constant_pool.insert(index, item);
+		index += increment;
+	}
+	return canonical_constant_pool;
 }
 
 #[cfg(test)]
 mod tests {
 
-use crate::class::constant_pool;
-
-use super::*;
-use std::fs::File;
+use std::{collections::BTreeMap, fs::File};
 use binrw::BinReaderExt;
 
-	const CLASS_FILE_PATH: &str = "tests/resources/Sample.class";
+use crate::class::{
+	class::{canonical_constant_pool_from,
+	RawClass,
+}, 
+constant_pool,
+access};
+
+const CLASS_FILE_PATH: &str = "tests/resources/Sample.class";
 	
-	fn get_class() -> Class {
-		let mut class_file = File::open(CLASS_FILE_PATH).expect("Couldn't access class file `CLASS_FILE`");
-		let clazz: Class = class_file.read_be().expect("Couldn't read class file `CLASS_FILE`");
+	fn get_class() -> RawClass {
+		let mut class_file = File::open(CLASS_FILE_PATH).expect("Couldn't access class file");
+		let clazz: RawClass = class_file.read_be().expect("Couldn't read class file");
 		return clazz;
 	}
 
@@ -82,7 +94,21 @@ use binrw::BinReaderExt;
 	#[test]
 	fn test_access_flags() {
 		let clazz = get_class();
-		assert!(clazz.access_flags & (AccessFlags::Public as u16) == (AccessFlags::Public as u16));
-		assert!(clazz.access_flags & (AccessFlags::Super as u16) == (AccessFlags::Super as u16));
+		assert!(clazz.access_flags & (access::ClassAccessFlags::Public as u16) == (access::ClassAccessFlags::Public as u16));
+		assert!(clazz.access_flags & (access::ClassAccessFlags::Super as u16) == (access::ClassAccessFlags::Super as u16));
+	}
+
+	#[test]
+	fn test_canonical_constant_pool() {
+		let pool: BTreeMap<u16, constant_pool::Item> = canonical_constant_pool_from(get_class().constant_pool);
+		for key in pool.keys() {
+			let item = pool.get(key).unwrap();
+			match item {
+				constant_pool::Item::Double(_d) => { println!("[{}] Found a double", key); },
+				constant_pool::Item::Long(_l) => { println!("[{}] Found a long", key); },
+				_ => { println!("[{}] Found something else", key); }
+			}
+		}
+		assert!(pool.contains_key(&13) == false);
 	}
 }
