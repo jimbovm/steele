@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use binrw::binrw;
 
-use crate::class::constant_pool;
+use crate::class::{constant_pool, field::Field};
 
 #[binrw]
 #[brw(big)]
@@ -17,7 +17,18 @@ pub struct RawClass {
 	pub access_flags: u16,
 	pub this_class: u16,
 	pub super_class: u16,
-	pub interfaces_count: u16
+	pub interfaces_count: u16,
+	#[br(count = interfaces_count as u16)]
+	pub interfaces: Vec<u16>,
+	pub fields_count: u16,
+	#[br(count = fields_count as u16)]
+	pub fields: Vec<Field>,
+	// pub method_count: u16,
+	// #[br(count = method_count as u16)]
+	// pub methods: Vec<Method>,
+	// pub attribute_count: u16,
+	// #[br(count = attribute_count as u16)]
+	// pub attributes: Vec<Attribute>,
 }
 
 fn canonical_constant_pool_from(raw_constant_pool: Vec<constant_pool::Item>) -> BTreeMap<u16, constant_pool::Item> {
@@ -43,11 +54,9 @@ use std::{collections::BTreeMap, fs::File};
 use binrw::BinReaderExt;
 
 use crate::class::{
-	class::{canonical_constant_pool_from,
+	access, class::{canonical_constant_pool_from,
 	RawClass,
-}, 
-constant_pool,
-access};
+}, constant_pool, field::Field};
 
 const CLASS_FILE_PATH: &str = "tests/resources/Sample.class";
 	
@@ -110,5 +119,22 @@ const CLASS_FILE_PATH: &str = "tests/resources/Sample.class";
 			}
 		}
 		assert!(pool.contains_key(&13) == false);
+	}
+
+	#[test]
+	fn test_fields() {
+		let clazz = get_class();
+		let canonical_pool = canonical_constant_pool_from(get_class().constant_pool);
+		let field_1 = &clazz.fields[0];
+
+		assert_eq!(field_1.name_index, 21);
+		assert_eq!(field_1.descriptor_index, 22);
+		assert_eq!(field_1.access_flags & access::FieldAccessPropertyFlags::Public as u16, access::FieldAccessPropertyFlags::Public as u16);
+		assert_eq!(field_1.access_flags & access::FieldAccessPropertyFlags::Static as u16, access::FieldAccessPropertyFlags::Static as u16);
+		assert_eq!(field_1.access_flags & access::FieldAccessPropertyFlags::Final as u16, access::FieldAccessPropertyFlags::Final as u16);
+		assert_eq!(field_1.attributes_count, 1);
+
+		assert_eq!(canonical_pool.get(&(field_1.name_index)).unwrap(), &constant_pool::Item::Utf8(constant_pool::Utf8 { length: b"STATIC_CONST_INT".len() as u16, bytes: b"STATIC_CONST_INT".to_vec() }));
+		assert_eq!(canonical_pool.get(&(field_1.descriptor_index)).unwrap(), &constant_pool::Item::Utf8(constant_pool::Utf8 { length: 1u16, bytes: b"I".to_vec() }));
 	}
 }
