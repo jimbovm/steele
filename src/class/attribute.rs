@@ -11,7 +11,7 @@ pub struct Attribute {
 	name_index: u16,
 	length: u32,
 	#[br(count = length)]
-	attribute_info: Vec<u8>
+	attribute_info: Vec<u8> // to be parsed as AttributeInfo, but dependent on parsed constant pool
 }
 
 pub enum AttributeInfo {
@@ -26,7 +26,6 @@ pub enum AttributeInfo {
 	PermittedSubclasses(PermittedSubclasses),
 }
 
-
 struct AttributeReadArgs {
 	constant_pool:  BTreeMap<u16, constant_pool::Item>,
 }
@@ -36,16 +35,12 @@ struct AttributeReadArgs {
 #[brw(big)]
 #[derive(PartialEq, Debug)]
 pub struct ConstantValue {
-	pub attribute_name_index: u16,
-	pub attribute_length: u32,
 	pub constant_value_index: u16
 }
 
 #[binrw]
 #[brw(big)]
 pub struct Code {
-	pub attribute_name_index: u16,
-	pub attribute_length: u32,
 	pub max_stack: u16,
 	pub max_locals: u16,
 	pub code_count: u32,
@@ -71,8 +66,6 @@ pub struct ExceptionHandler {
 #[binrw]
 #[brw(big)]
 pub struct LineNumberTable {
-	pub attribute_name_index: u16,
-	pub attribute_length: u32,
 	pub lines_count: u32,
 	#[br(count = lines_count as u16)]
 	pub lines: Vec<Line>,
@@ -88,8 +81,6 @@ pub struct Line {
 #[binrw]
 #[brw(big)]
 pub struct StackMapTable {
-	attribute_name_index: u8,
-	attribute_length: u16,
 	number_of_entries: u8,
 	#[br(count = number_of_entries)]
 	entries: Vec<StackMapFrame>
@@ -183,8 +174,6 @@ pub struct FullFrame {
 #[binrw]
 #[brw(big)]
 pub struct BootstrapMethods {
-	attribute_name_index: u16,
-	attribute_length: u32,
 	num_bootstrap_methods: u16,
 	#[br(count = num_bootstrap_methods)]
 	bootstrap_methods: Vec<BootstrapMethodEntry>,
@@ -213,8 +202,6 @@ pub struct BootstrapMethodEntry {
 #[binrw]
 #[brw(big)]
 pub struct NestHost {
-	attribute_name_index: u16,
-	attribute_length: u32,
 	host_class_index: u16,
 }
 
@@ -230,8 +217,6 @@ pub struct NestHost {
 #[binrw]
 #[brw(big)]
 pub struct NestMembers {
-	attribute_name_index: u16,
-	attribute_length: u32,
 	number_of_classes: u16,
 	#[br(count = number_of_classes)]
 	classes: Vec<u16>
@@ -241,8 +226,6 @@ pub struct NestMembers {
 #[binrw]
 #[brw(big)]
 pub struct PermittedSubclasses {
-	attribute_name_index: u16,
-	attribute_length: u32,
 	number_of_classes: u16,
 	#[br(count = number_of_classes)]
 	classes: Vec<u16>
