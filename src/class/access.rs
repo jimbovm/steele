@@ -1,6 +1,6 @@
 /// An implementation of JVM class access and property flags (JVMS17 Table 4.1-B)
 #[repr(u16)]
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone, Copy)]
 pub enum ClassAccessPropertyFlags {
 	Public = 0x0001,
 	Final = 0x0010,
@@ -9,9 +9,9 @@ pub enum ClassAccessPropertyFlags {
 	Abstract = 0x4000,
 }
 
-/// An implementation of JVM field access and property flags (JVMS17 Table 4.5-A)
+/// An implementation of JVM method access and property flags (JVMS17 Table 4.6-A)
 #[repr(u16)]
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone, Copy)]
 pub enum MethodAccessPropertyFlags {
 	Public = 0x0001,
 	Private = 0x0002,
@@ -26,9 +26,9 @@ pub enum MethodAccessPropertyFlags {
 	Synthetic = 0x1000,
 }
 
-/// An implementation of JVM method access and property flags (JVMS17 Table 4.6-A)
+/// An implementation of JVM field access and property flags (JVMS17 Table 4.5-A)
 #[repr(u16)]
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone, Copy)]
 pub enum FieldAccessPropertyFlags {
 	Public = 0x0001,
 	Private = 0x0002,
