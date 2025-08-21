@@ -1,17 +1,21 @@
-use std::io::{Cursor, Read, Error};
+use std::{
+	fmt::{
+		self, Display, Formatter},
+	io::{
+		Cursor,
+		Read}};
 
-pub type ModifiedUtf8String = ModifiedUtf8StringType;
-
-pub struct ModifiedUtf8StringType {
-	bytes: Vec<u8>,
+pub struct ModifiedUtf8String {
+	pub bytes: Vec<u8>,
+	parsed: String
 }
 
-impl ModifiedUtf8StringType {
+impl ModifiedUtf8String {
 
 	pub const WIDE_CHARACTER_PADDING: u8 = 0b11101101;
 
 	pub fn new(bytes: Vec<u8>) -> Self {
-		Self { bytes }
+		Self { bytes: bytes, parsed: String::new() }
 	}
 
 	/// See JVMS17 p. 4.4.7.
@@ -63,7 +67,11 @@ impl ModifiedUtf8StringType {
 
 	/// Parses a "modified UTF-8" string, the JVM's internal string representation, into regular UTF-8.
 	/// Implements the algorithm shown in JVMS17 4.4.7.
-	fn parse(&self) -> Result<String, Error> {
+	fn parse(&self) -> Result<String, std::io::Error> {
+		if self.parsed != "" {
+			return Ok(self.parsed.clone());
+		}
+		
 		let mut output = String::new();
 		let mut cursor: Cursor<Vec<u8>> = Cursor::new(self.bytes.clone());
 		let mut buf: [u8; 1] = [0u8];
@@ -102,9 +110,11 @@ impl ModifiedUtf8StringType {
 		}
 		Ok(output)
 	}
+}
 
-	pub fn to_string(self) -> Result<String, Error> {
-		return self.parse();
+impl Display for ModifiedUtf8String {
+	fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+		write!(f, "{}", self.parse().unwrap_or_default())
 	}
 }
 
@@ -115,7 +125,7 @@ mod tests {
 	#[test]
 	fn test_simple_ascii() {
 		let input = b"abcde";
-		let output = ModifiedUtf8String::new(input.to_vec()).to_string().expect("Something went wrong converting the string");
+		let output = ModifiedUtf8String::new(input.to_vec()).to_string();
 		println!("{},{}", String::from_utf8_lossy(input), output);
 		assert_eq!(String::from_utf8_lossy(input), output);
 	}
@@ -123,7 +133,7 @@ mod tests {
 	#[test]
 	fn test_lower_utf_8() {
 		let input = ['%' as u8, 0b110_00010, 0b10_10_0011, 0b110_00010, 0b10_10_0011, 0b110_00010, 0b10_10_0011, '$' as u8];
-		let output = ModifiedUtf8String::new(input.to_vec()).to_string().expect("Something went wrong converting the string");
+		let output = ModifiedUtf8String::new(input.to_vec()).to_string();
 		assert_eq!("%£££$", output);
 	}
 
@@ -137,7 +147,7 @@ mod tests {
 			'I' as u8,
 			'O' as u8,
 			0b1110_0010, 0b10_000100, 0b10_111011];
-		let output = ModifiedUtf8String::new(input.to_vec()).to_string().expect("Something went wrong converting the string");
+		let output = ModifiedUtf8String::new(input.to_vec()).to_string();
 		assert_eq!("℻MARIO℻", output);
 	}
 
@@ -152,7 +162,7 @@ mod tests {
 			0b1011_0010, 0b10_100001,
 			0b110_00010, 0b10_100011,
 			'$' as u8, '$' as u8];
-		let output = ModifiedUtf8String::new(input.to_vec()).to_string().expect("Something went wrong converting the string");
+		let output = ModifiedUtf8String::new(input.to_vec()).to_string();
 		assert_eq!("$$£🂡£$$", output);
 	}
 }
