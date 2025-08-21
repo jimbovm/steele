@@ -1,8 +1,17 @@
+use std::{
+	fmt::{
+		self,
+		Error,
+		Formatter}};
+
 use binrw::binrw;
+use strum_macros;
+
+use crate::class::modified_utf8::ModifiedUtf8String;
 
 /// A control enum used in polymorphic parsing of constant pool entries.
 #[binrw]
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, strum_macros::Display)]
 pub enum Item {
 	/// Tag for CONSTANT_Utf8 (JVMS17 4.4-B)
 	#[br(magic(1u8))]
@@ -47,6 +56,12 @@ pub struct Utf8 {
 	pub length: u16,
 	#[br(count = length)]
 	pub bytes: Vec<u8>,
+}
+
+impl fmt::Display for Utf8 {
+	fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+		write!(f, "{}", ModifiedUtf8String::new(self.bytes.clone()))
+	}
 }
 
 /// An implementation of CONSTANT_Integer (JVMS 4.4-B)
