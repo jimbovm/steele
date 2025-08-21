@@ -2,7 +2,11 @@ use std::collections::BTreeMap;
 
 use binrw::binrw;
 
-use crate::class::{constant_pool, field::Field};
+use crate::class::{
+	attribute::Attribute,
+	constant_pool,
+	field::Field,
+	method::Method};
 
 /// A representation of a binary Java class file (JVMS17 4.1)
 #[binrw]
@@ -17,7 +21,7 @@ pub struct RawClass {
 	pub major_version: u16,
 	/// The number of constant pool items.
 	pub constant_pool_count: u16,
-	#[br(count = (constant_pool_count - 2) as u16)]
+	#[br(count = constant_pool_count - 2)]
 	/// The constant pool (JVMS17 4.4).
 	pub constant_pool: Vec<constant_pool::Item>,
 	/// The access and modifier flags for the class.
@@ -29,19 +33,24 @@ pub struct RawClass {
 	/// The number of interface entries.
 	pub interfaces_count: u16,
 	/// Constant pool index numbers giving superinterfaces of this class/interface.
-	#[br(count = interfaces_count as u16)]
+	#[br(count = interfaces_count)]
 	pub interfaces: Vec<u16>,
 	// The number of field entries.
 	pub fields_count: u16,
-	#[br(count = fields_count as u16)]
+	#[br(count = fields_count)]
 	// An array of field info structures (JVMS17 4.5).
 	pub fields: Vec<Field>,
-	// pub method_count: u16,
-	// #[br(count = method_count as u16)]
-	// pub methods: Vec<Method>,
-	// pub attribute_count: u16,
-	// #[br(count = attribute_count as u16)]
-	// pub attributes: Vec<Attribute>,
+	pub method_count: u16,
+	#[br(count = method_count)]
+	pub methods: Vec<Method>,
+	pub attribute_count: u16,
+	#[br(count = attribute_count as u16)]
+	pub attributes: Vec<Attribute>,
+}
+
+impl RawClass {
+
+
 }
 
 /// Converts a raw constant pool to canonical form.
@@ -72,9 +81,12 @@ use std::{collections::BTreeMap, fs::File};
 use binrw::BinReaderExt;
 
 use crate::class::{
-	access, class::{canonical_constant_pool_from,
-	RawClass,
-}, constant_pool};
+	access::{self, MethodAccessPropertyFlags},
+	class::{
+		canonical_constant_pool_from,
+		RawClass,
+	}, 
+	constant_pool, modified_utf8::ModifiedUtf8String};
 
 const CLASS_FILE_PATH: &str = "tests/resources/Sample.class";
 	
@@ -154,5 +166,41 @@ const CLASS_FILE_PATH: &str = "tests/resources/Sample.class";
 
 		assert_eq!(canonical_pool.get(&(field_1.name_index)).unwrap(), &constant_pool::Item::Utf8(constant_pool::Utf8 { length: b"STATIC_CONST_INT".len() as u16, bytes: b"STATIC_CONST_INT".to_vec() }));
 		assert_eq!(canonical_pool.get(&(field_1.descriptor_index)).unwrap(), &constant_pool::Item::Utf8(constant_pool::Utf8 { length: 1u16, bytes: b"I".to_vec() }));
+	}
+
+	#[test]
+	fn test_methods() {
+		let clazz = get_class();
+		let canonical_pool = canonical_constant_pool_from(get_class().constant_pool);
+
+		let cases = [
+			(&clazz.methods[0], "<init>", "()V", vec![]),
+			(&clazz.methods[1], "someMethod", "()Ljava/lang/String;", vec![]),
+			(&clazz.methods[2], "doNothing", "()V", vec![]),
+			(&clazz.methods[3], "newInstance", "()LSample;", vec![MethodAccessPropertyFlags::Public, MethodAccessPropertyFlags::Static]),
+		];
+		
+		for (method, name, descriptor, flags) in cases.iter() {
+			let method_name_constant = canonical_pool.get(&method.name_index).unwrap();
+			let descriptor_constant = canonical_pool.get(&method.descriptor_index).unwrap();
+			let method_name = if let constant_pool::Item::Utf8(utf8) = method_name_constant {
+					ModifiedUtf8String::new(utf8.bytes.clone()).to_string()
+				}
+				else {
+					panic!("Expected method name index to point to a Utf8 constant, got something else");
+				};
+			let method_descriptor = if let constant_pool::Item::Utf8(utf8) = descriptor_constant {
+					ModifiedUtf8String::new(utf8.bytes.clone()).to_string()
+				}
+				else {
+					panic!("Expected method descriptor index to point to a Utf8 constant, got something else");
+				};
+
+			assert_eq!(method_name, *name);
+			assert_eq!(method_descriptor, *descriptor);
+			for flag in flags {
+				assert_eq!(method.access_flags & (*flag as u16), *flag as u16);
+			}
+		}
 	}
 }
