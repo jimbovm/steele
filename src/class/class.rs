@@ -13,7 +13,8 @@ use crate::class::{
 	method::Method};
 
 pub struct Class {
-	pub header: Header,
+	pub major_version: u16,
+	pub minor_version: u16,
 	pub constants: ConstantPool,
 	pub parameters: Parameters,
 	// pub fields: Fields,
@@ -28,7 +29,8 @@ impl Class {
 		let constants = ConstantPool::from(raw_constant_pool);
 		let parameters = stream.read_be().expect("Could not parse parameters");
 		Class {
-			header,
+			major_version: header.major_version,
+			minor_version: header.minor_version,
 			constants,
 			parameters,
 		}
@@ -114,20 +116,15 @@ const CLASS_FILE_PATH: &str = "tests/resources/Sample.class";
 	}
 
 	#[test]
-	fn test_cafebabe() {
-		assert_eq!(get_class().header.magic, 0xCAFEBABEu32);
-	}
-
-	#[test]
 	fn test_minor_version() {
 		const MINOR_VERSION: u16 = 0;
-		assert_eq!(get_class().header.minor_version, MINOR_VERSION);
+		assert_eq!(get_class().minor_version, MINOR_VERSION);
 	}
 
 	#[test]
 	fn test_major_version() {
 		const MAJOR_VERSION: u16 = 61;
-		assert_eq!(get_class().header.major_version, MAJOR_VERSION);
+		assert_eq!(get_class().major_version, MAJOR_VERSION);
 	}
 
 	#[test]
