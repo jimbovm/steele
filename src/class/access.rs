@@ -1,6 +1,8 @@
+use strum_macros::EnumIter;
+
 /// An implementation of JVM class access and property flags (JVMS17 Table 4.1-B)
 #[repr(u16)]
-#[derive(PartialEq, Debug, Clone, Copy)]
+#[derive(PartialEq, Debug, Clone, Copy, EnumIter)]
 pub enum ClassAccessPropertyFlags {
 	Public = 0x0001,
 	Final = 0x0010,
@@ -11,7 +13,7 @@ pub enum ClassAccessPropertyFlags {
 
 /// An implementation of JVM method access and property flags (JVMS17 Table 4.6-A)
 #[repr(u16)]
-#[derive(PartialEq, Debug, Clone, Copy)]
+#[derive(PartialEq, Debug, Clone, Copy, EnumIter)]
 pub enum MethodAccessPropertyFlags {
 	Public = 0x0001,
 	Private = 0x0002,
@@ -28,7 +30,7 @@ pub enum MethodAccessPropertyFlags {
 
 /// An implementation of JVM field access and property flags (JVMS17 Table 4.5-A)
 #[repr(u16)]
-#[derive(PartialEq, Debug, Clone, Copy)]
+#[derive(PartialEq, Debug, Clone, Copy, EnumIter)]
 pub enum FieldAccessPropertyFlags {
 	Public = 0x0001,
 	Private = 0x0002,
