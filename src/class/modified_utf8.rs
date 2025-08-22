@@ -126,7 +126,6 @@ mod tests {
 	fn test_simple_ascii() {
 		let input = b"abcde";
 		let output = ModifiedUtf8String::new(input.to_vec()).to_string();
-		println!("{},{}", String::from_utf8_lossy(input), output);
 		assert_eq!(String::from_utf8_lossy(input), output);
 	}
 
