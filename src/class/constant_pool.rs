@@ -1,12 +1,10 @@
 use std::{
-	collections::BTreeMap, fmt::{
-		self,
-		Error,
-		Formatter}, io::{Read, Seek}};
+	collections::BTreeMap,
+	error::Error,
+	fmt::{
+		self, Display, Formatter}};
 
-use binrw::{
-	binrw,
-	BinRead};
+use binrw::binrw;
 use strum_macros;
 
 use crate::class::modified_utf8::ModifiedUtf8String;
@@ -36,7 +34,60 @@ impl From<RawConstantPool> for ConstantPool {
 	}
 }
 
+#[derive(Debug)]
+struct TypeError {
+	pub wanted_type: std::string::String,
+	pub actual_type: std::string::String,
+}
+
+impl Display for TypeError {
+	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+		write!(f, "{} wanted, but got {}", self.wanted_type, self.actual_type)
+	}
+}
+
+impl Error for TypeError {}
+
+#[derive(Debug)]
+struct IndexError {
+	pub index: u16,
+}
+
+impl Display for IndexError {
+	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+		write!(f, "invalid index {}", self.index)
+	}
+}
+
+impl Error for IndexError {}
+
 impl ConstantPool {
+
+	pub fn get_utf8(&self, index: u16) -> Result<std::string::String, Box<dyn Error>> {
+		let constant = self.constants.get(&index);
+		match constant {
+			Some(constant) => {
+				match constant {
+					ConstantPoolItem::Utf8(utf8) => Ok(ModifiedUtf8String::new(utf8.bytes.clone()).to_string()),
+					other_type => Err(TypeError { wanted_type: "Utf8".to_string(), actual_type: other_type.to_string() }.to_string().into())
+				}
+			}
+			None => Err(IndexError { index }.into())
+		}
+	}
+
+	pub fn get_class(&self, index: u16) -> Result<Class, Box<dyn Error>> {
+		let constant = self.constants.get(&index);
+		match constant {
+			Some(constant) => {
+				match constant {
+					ConstantPoolItem::Class(class) => Ok(*class),
+					other_type => Err(TypeError { wanted_type: "Class".to_string(), actual_type: other_type.to_string() }.to_string().into())
+				}
+			}
+			None => Err(IndexError { index }.into())
+		}
+	}
 
 	/// Converts a raw constant pool to canonical form.
 	/// 
@@ -111,7 +162,7 @@ pub struct Utf8 {
 }
 
 impl fmt::Display for Utf8 {
-	fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+	fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
 		write!(f, "{}", ModifiedUtf8String::new(self.bytes.clone()))
 	}
 }

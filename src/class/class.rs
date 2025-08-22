@@ -1,38 +1,53 @@
-use std::
+use std::{collections::BTreeMap, 
 	io::{
-		Read, Seek};
+		Read, Seek}};
 
 use binrw::{
 	binrw,
 	BinReaderExt};
+use strum::IntoEnumIterator;
 
 use crate::class::{
-	attribute::Attribute,
-	constant_pool::{ConstantPool, RawConstantPool},
-	field::Field,
-	method::Method};
+	access::{self, ClassAccessPropertyFlags}, attribute::Attribute, constant_pool::{self, ConstantPool, ConstantPoolItem, RawConstantPool, Utf8}, field::Field, method::Method};
 
 pub struct Class {
 	pub major_version: u16,
 	pub minor_version: u16,
-	pub constants: ConstantPool,
-	pub parameters: Parameters,
+	pub constant_pool: BTreeMap<u16, ConstantPoolItem>,
+	pub flags: Vec<ClassAccessPropertyFlags>,
+	pub this_class: constant_pool::Class,
+	pub super_class: constant_pool::Class,
 	// pub fields: Fields,
 	// pub methods: Methods,
 	// pub attributes: ClassAttributes,
 }
 
 impl Class {
+	fn get_access_flags(flag_word: u16) -> Vec<ClassAccessPropertyFlags> {
+		let mut flag_values: Vec<ClassAccessPropertyFlags> = Vec::new();
+		for flag in access::ClassAccessPropertyFlags::iter() {
+			if (flag_word & (flag as u16)) == flag as u16 {
+				flag_values.push(flag);
+			}
+		}
+		flag_values
+	}
+
 	pub fn new<T: Read + Seek>(mut stream: T) -> Class {
 		let header: Header = stream.read_be().expect("Could not parse header");
 		let raw_constant_pool: RawConstantPool = stream.read_be().expect("Could not parse constant pool");
-		let constants = ConstantPool::from(raw_constant_pool);
-		let parameters = stream.read_be().expect("Could not parse parameters");
+		let constant_pool: ConstantPool = ConstantPool::from(raw_constant_pool);
+		let parameters: Parameters = stream.read_be().expect("Could not parse parameters");
+		let this_class = &constant_pool.get_class(parameters.this_class).unwrap();
+		let super_class = &constant_pool.get_class(parameters.super_class).unwrap();
+
 		Class {
 			major_version: header.major_version,
 			minor_version: header.minor_version,
-			constants,
-			parameters,
+			constant_pool: constant_pool.constants,
+			flags: Self::get_access_flags(parameters.access_flags),
+			this_class: *this_class,
+			super_class: *super_class,
 		}
 	}
 }
@@ -139,7 +154,7 @@ const CLASS_FILE_PATH: &str = "tests/resources/Sample.class";
 		let clazz = get_class();
 
 		for (index, expected) in cases {
-			assert_eq!(clazz.constants.constants.get(&index), Some(&expected));
+			assert_eq!(clazz.constant_pool.get(&index), Some(&expected));
 			// println!("{:?}", clazz.constants);
 		}
 	}
