@@ -27,7 +27,7 @@ pub enum AttributeInfo {
 }
 
 struct AttributeReadArgs {
-	constant_pool:  BTreeMap<u16, constant_pool::Item>,
+	constant_pool:  BTreeMap<u16, constant_pool::ConstantPoolItem>,
 }
 
 // An implementation of a ConstantValue attribute (JVMS17 4.7.2)

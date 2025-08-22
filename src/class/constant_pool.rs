@@ -1,18 +1,70 @@
 use std::{
-	fmt::{
+	collections::BTreeMap, fmt::{
 		self,
 		Error,
-		Formatter}};
+		Formatter}, io::{Read, Seek}};
 
-use binrw::binrw;
+use binrw::{
+	binrw,
+	BinRead};
 use strum_macros;
 
 use crate::class::modified_utf8::ModifiedUtf8String;
 
+#[binrw]
+#[brw(big)]
+#[derive(Default)]
+pub struct RawConstantPool {
+	pub constant_pool_count: u16,
+	#[br(count = constant_pool_count - 2)]
+	pub constants: Vec<ConstantPoolItem>,
+}
+
+#[derive(Debug, Default)]
+pub struct ConstantPool {
+	pub length: u16,
+	pub constants: BTreeMap<u16, ConstantPoolItem>,
+}
+
+impl From<RawConstantPool> for ConstantPool {
+	fn from(raw: RawConstantPool) -> Self {
+		let canonical_pool = Self::canonical_constant_pool_from(raw.constants);
+		Self {
+			length: raw.constant_pool_count,
+			constants: canonical_pool,
+		}
+	}
+}
+
+impl ConstantPool {
+
+	/// Converts a raw constant pool to canonical form.
+	/// 
+	/// Due to a JVM design mistake a double or long stored in the constant pool table "invalidates" the next index.
+	/// For instance if a double or long is stored as constant pool entry number 10, counting from 1, then the
+	/// index number number used for the next entry will be 12, and index number 11 will be invalid (JVMS17 4.4.5).
+	fn canonical_constant_pool_from(raw_constant_pool: Vec<ConstantPoolItem>) -> BTreeMap<u16, ConstantPoolItem> {
+		let mut canonical_constant_pool: BTreeMap<u16, ConstantPoolItem> = BTreeMap::new();
+		let mut index: u16 = 1;
+		for item in raw_constant_pool.into_iter() {
+			let increment: u16;
+			match item {
+				ConstantPoolItem::Double(ref _d) => { increment = 2; },
+				ConstantPoolItem::Long(ref _l) => { increment = 2; },
+				_ => { increment = 1; }
+			}
+			canonical_constant_pool.insert(index, item);
+			index += increment;
+		}
+		return canonical_constant_pool;
+	}
+
+}
+
 /// A control enum used in polymorphic parsing of constant pool entries.
 #[binrw]
-#[derive(PartialEq, Debug, strum_macros::Display)]
-pub enum Item {
+#[derive(PartialEq, Debug, Clone, strum_macros::Display)]
+pub enum ConstantPoolItem {
 	/// Tag for CONSTANT_Utf8 (JVMS17 4.4-B)
 	#[br(magic(1u8))]
 	Utf8(Utf8),
@@ -51,7 +103,7 @@ pub enum Item {
 /// An implementation of CONSTANT_Utf8 (JVMS17 4.4-B)
 #[binrw]
 #[brw(big)]
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct Utf8 {
 	pub length: u16,
 	#[br(count = length)]
@@ -67,7 +119,7 @@ impl fmt::Display for Utf8 {
 /// An implementation of CONSTANT_Integer (JVMS 4.4-B)
 #[binrw]
 #[brw(big)]
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone, Copy)]
 pub struct Integer {
 	pub value: u32,
 }
@@ -75,7 +127,7 @@ pub struct Integer {
 /// An implementation of CONSTANT_Float (JVMS 4.4-B)
 #[binrw]
 #[brw(big)]
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone, Copy)]
 pub struct Float {
 	pub value: u32,
 }
@@ -83,7 +135,7 @@ pub struct Float {
 /// An implementation of CONSTANT_Long (JVMS 4.4-B)
 #[binrw]
 #[brw(big)]
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone, Copy)]
 pub struct Long {
 	pub value: u64,
 }
@@ -91,7 +143,7 @@ pub struct Long {
 /// An implementation of CONSTANT_Double (JVMS 4.4-B)
 #[binrw]
 #[brw(big)]
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone, Copy)]
 pub struct Double {
 	pub value: u64,
 }
@@ -99,7 +151,7 @@ pub struct Double {
 /// An implementation of CONSTANT_Class (JVMS 4.4-B)
 #[binrw]
 #[brw(big)]
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone, Copy)]
 pub struct Class {
 	pub index: u16,
 }
@@ -107,7 +159,7 @@ pub struct Class {
 /// An implementation of CONSTANT_String (JVMS 4.4-B)
 #[binrw]
 #[brw(big)]
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone, Copy)]
 pub struct String {
 	pub index: u16,
 }
@@ -115,7 +167,7 @@ pub struct String {
 /// An implementation of CONSTANT_Fieldref (JVMS 4.4-B)
 #[binrw]
 #[brw(big)]
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone, Copy)]
 pub struct FieldRef {
 	pub class_index: u16,
 	pub name_and_type_index: u16,
@@ -124,7 +176,7 @@ pub struct FieldRef {
 /// An implementation of CONSTANT_Methodref (JVMS 4.4-B)
 #[binrw]
 #[brw(big)]
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone, Copy)]
 pub struct MethodRef {
 	pub class_index: u16,
 	pub name_and_type_index: u16,
@@ -134,7 +186,7 @@ pub struct MethodRef {
 #[binrw]
 #[brw(big)]
 #[bw(magic = 11u8)]
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone, Copy)]
 pub struct InterfaceMethodRef {
 	pub class_index: u16,
 	pub name_and_type_index: u16,
@@ -143,7 +195,7 @@ pub struct InterfaceMethodRef {
 /// An implementation of CONSTANT_NameAndType (JVMS 4.4-B)
 #[binrw]
 #[brw(big)]
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone, Copy)]
 pub struct NameAndType {
 	pub name_index: u16,
 	pub type_index: u16,
