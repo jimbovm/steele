@@ -3,13 +3,15 @@ use std::{collections::BTreeMap,
 		Read, Seek}};
 
 use binrw::{
-	binrw,
-	BinReaderExt};
+	binrw, BinRead, BinReaderExt};
 use strum::IntoEnumIterator;
 
 use crate::class::{
-	access::{self, ClassAccessPropertyFlags}, attribute::Attribute, constant_pool::{self, ConstantPool, ConstantPoolItem, RawConstantPool, Utf8}, field::Field, method::Method};
+	access::{self, ClassAccessPropertyFlags}, constant_pool::{self, ConstantPool, ConstantPoolItem, ConstantPoolRequiredArgs, RawConstantPool}, field::Field, method::Method};
 
+/// A high-level container for class data.
+/// 
+/// This struct abstracts out the class file into a higher-level format that is a lot easier to work with.
 pub struct Class {
 	pub major_version: u16,
 	pub minor_version: u16,
@@ -37,14 +39,18 @@ impl Class {
 		let header: Header = stream.read_be().expect("Could not parse header");
 		let raw_constant_pool: RawConstantPool = stream.read_be().expect("Could not parse constant pool");
 		let constant_pool: ConstantPool = ConstantPool::from(raw_constant_pool);
+		let constant_map = constant_pool.clone().constants;
 		let parameters: Parameters = stream.read_be().expect("Could not parse parameters");
 		let this_class = &constant_pool.get_class(parameters.this_class).unwrap();
 		let super_class = &constant_pool.get_class(parameters.super_class).unwrap();
+		let fields: Fields = Fields::read_options(&mut stream, binrw::Endian::Big, ConstantPoolRequiredArgs { constant_pool }).expect("Could not parse fields");
+
+		println!("{:?}", fields);
 
 		Class {
 			major_version: header.major_version,
 			minor_version: header.minor_version,
-			constant_pool: constant_pool.constants,
+			constant_pool: constant_map,
 			flags: Self::get_access_flags(parameters.access_flags),
 			this_class: *this_class,
 			super_class: *super_class,
@@ -68,7 +74,7 @@ pub struct Header {
 
 #[binrw]
 #[brw(big)]
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct Parameters {
 	pub access_flags: u16,
 	/// The constant pool index giving this class's name.
@@ -82,15 +88,33 @@ pub struct Parameters {
 	pub interfaces: Vec<u16>,
 }
 
-#[binrw]
-#[brw(big)]
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct Fields {
 	// The number of field entries.
 	pub fields_count: u16,
-	#[br(count = fields_count)]
 	// An array of field info structures (JVMS17 4.5).
 	pub fields: Vec<Field>,
+}
+
+impl BinRead for Fields {
+	type Args<'a> = ConstantPoolRequiredArgs;
+
+	fn read_options<R: Read + Seek>(
+		reader: &mut R,
+		endian: binrw::Endian,
+		args: Self::Args<'_>,
+	) -> binrw::BinResult<Self> {
+		let fields_count = u16::read_be(reader)?;
+		let mut fields: Vec<Field> = Vec::new();
+		for _ in 0..(fields_count - 1) {
+			let field = Field::read_options(reader, endian, args.clone())?;
+			fields.push(field);
+		}
+		Ok(Fields {
+			fields_count,
+			fields,
+		})
+	}
 }
 
 #[binrw]
@@ -108,7 +132,7 @@ pub struct Methods {
 pub struct ClassAttributes {
 	pub attribute_count: u16,
 	#[br(count = attribute_count as u16)]
-	pub attributes: Vec<Attribute>,
+	pub attributes: Vec<u8>,
 }
 
 #[cfg(test)]
@@ -117,8 +141,7 @@ mod tests {
 use std::fs::File;
 
 use crate::class::{
-	class::Class, 
-	constant_pool::{
+	access::ClassAccessPropertyFlags, class::Class, constant_pool::{
 		self,
 		ConstantPoolItem}};
 
@@ -155,18 +178,17 @@ const CLASS_FILE_PATH: &str = "tests/resources/Sample.class";
 
 		for (index, expected) in cases {
 			assert_eq!(clazz.constant_pool.get(&index), Some(&expected));
-			// println!("{:?}", clazz.constants);
 		}
 	}
 
-	/* #[test]
+	#[test]
 	fn test_access_flags() {
 		let clazz = get_class();
-		assert!(clazz.access_flags & (access::ClassAccessPropertyFlags::Public as u16) == (access::ClassAccessPropertyFlags::Public as u16));
-		assert!(clazz.access_flags & (access::ClassAccessPropertyFlags::Super as u16) == (access::ClassAccessPropertyFlags::Super as u16));
+		assert!(clazz.flags.contains(&ClassAccessPropertyFlags::Public));
+		assert!(clazz.flags.contains(&ClassAccessPropertyFlags::Super));
 	}
 
-	#[test]
+	/* #[test]
 	fn test_canonical_constant_pool() {
 		let pool: BTreeMap<u16, constant_pool::ConstantPoolItem> = canonical_constant_pool_from(get_class().constant_pool);
 		for key in pool.keys() {

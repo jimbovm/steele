@@ -119,9 +119,9 @@ impl Display for ModifiedUtf8String {
 }
 
 mod tests {
-	
-	use crate::class::modified_utf8::ModifiedUtf8String;
+	use super::ModifiedUtf8String;
 
+	
 	#[test]
 	fn test_simple_ascii() {
 		let input = b"abcde";

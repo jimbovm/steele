@@ -1,6 +1,5 @@
 use binrw::binrw;
 
-use super::attribute::Attribute;
 
 #[binrw]
 #[brw(big)]
@@ -10,5 +9,5 @@ pub struct Method {
 	pub descriptor_index: u16,
 	pub attributes_count: u16,
 	#[br(count = attributes_count)]
-	pub attributes: Vec<Attribute>,
+	pub attributes: Vec<u8>,
 }

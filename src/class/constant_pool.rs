@@ -18,7 +18,7 @@ pub struct RawConstantPool {
 	pub constants: Vec<ConstantPoolItem>,
 }
 
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct ConstantPool {
 	pub length: u16,
 	pub constants: BTreeMap<u16, ConstantPoolItem>,
@@ -35,7 +35,7 @@ impl From<RawConstantPool> for ConstantPool {
 }
 
 #[derive(Debug)]
-struct TypeError {
+pub struct TypeError {
 	pub wanted_type: std::string::String,
 	pub actual_type: std::string::String,
 }
@@ -49,7 +49,7 @@ impl Display for TypeError {
 impl Error for TypeError {}
 
 #[derive(Debug)]
-struct IndexError {
+pub struct IndexError {
 	pub index: u16,
 }
 
@@ -61,33 +61,41 @@ impl Display for IndexError {
 
 impl Error for IndexError {}
 
+/// Create an accessor for retrieving a ConstantPoolItem as a specific type.
+#[macro_export]
+macro_rules! make_accessor {
+	($fn_name: ident,
+	 $constant_pool_item_type: ident,
+	 $wanted_type: literal
+	) => {
+		pub fn $fn_name(&self, index: u16) -> Result<$constant_pool_item_type, Box<dyn Error>> {
+			let constant = self.constants.get(&index);
+			match constant {
+				Some(constant) => {
+					match constant {
+						ConstantPoolItem::$constant_pool_item_type(itm) => Ok(itm.clone()),
+						other_type => Err(TypeError { wanted_type: $wanted_type.to_string(), actual_type: other_type.to_string() }.to_string().into())
+					}
+				}
+				None => Err(IndexError { index }.into())
+			}
+		}
+	};
+}
+
 impl ConstantPool {
 
-	pub fn get_utf8(&self, index: u16) -> Result<std::string::String, Box<dyn Error>> {
-		let constant = self.constants.get(&index);
-		match constant {
-			Some(constant) => {
-				match constant {
-					ConstantPoolItem::Utf8(utf8) => Ok(ModifiedUtf8String::new(utf8.bytes.clone()).to_string()),
-					other_type => Err(TypeError { wanted_type: "Utf8".to_string(), actual_type: other_type.to_string() }.to_string().into())
-				}
-			}
-			None => Err(IndexError { index }.into())
-		}
-	}
-
-	pub fn get_class(&self, index: u16) -> Result<Class, Box<dyn Error>> {
-		let constant = self.constants.get(&index);
-		match constant {
-			Some(constant) => {
-				match constant {
-					ConstantPoolItem::Class(class) => Ok(*class),
-					other_type => Err(TypeError { wanted_type: "Class".to_string(), actual_type: other_type.to_string() }.to_string().into())
-				}
-			}
-			None => Err(IndexError { index }.into())
-		}
-	}
+	make_accessor!(get_utf8, Utf8, "Utf8");
+	make_accessor!(get_integer, Integer, "Integer");
+	make_accessor!(get_float, Float, "Float");
+	make_accessor!(get_long, Long, "Long");
+	make_accessor!(get_double, Double, "Double");
+	make_accessor!(get_class, Class, "Class");
+	make_accessor!(get_string, String, "String");
+	make_accessor!(get_field_ref, FieldRef, "FieldRef");
+	make_accessor!(get_method_ref, MethodRef, "MethodRef");
+	make_accessor!(get_interface_method_ref, InterfaceMethodRef, "InterfaceMethodRef");
+	make_accessor!(get_name_and_type, NameAndType, "NameAndType");
 
 	/// Converts a raw constant pool to canonical form.
 	/// 
@@ -251,3 +259,8 @@ pub struct NameAndType {
 	pub name_index: u16,
 	pub type_index: u16,
 }
+
+#[derive(Clone, Debug, Default)]
+pub struct ConstantPoolRequiredArgs {
+	pub constant_pool: ConstantPool,
+} 

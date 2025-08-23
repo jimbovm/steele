@@ -1,19 +1,52 @@
-use std::collections::BTreeMap;
 
-use binrw::
-	binrw;
+use binrw::{
+	binrw, BinRead};
 
-use crate::class::constant_pool;
+use crate::class::{constant_pool::{IndexError, ConstantPoolRequiredArgs}, modified_utf8::ModifiedUtf8String};
 
-#[binrw]
-#[brw(big)]
+#[derive(PartialEq, Debug)]
 pub struct Attribute {
 	name_index: u16,
 	length: u32,
-	#[br(count = length)]
-	attribute_info: Vec<u8> // to be parsed as AttributeInfo, but dependent on parsed constant pool
+	attribute_info: AttributeInfo,
 }
 
+impl BinRead for Attribute {
+	type Args<'a> = ConstantPoolRequiredArgs;
+
+	fn read_options<R: std::io::Read + std::io::Seek>(
+		reader: &mut R,
+		endian: binrw::Endian,
+		args: ConstantPoolRequiredArgs,
+	) -> binrw::BinResult<Self> {
+		let name_index = u16::read_options(reader, endian, ())?;
+		let length = u32::read_options(reader, endian, ())?;
+
+		let attribute_type_constant = args.constant_pool.get_utf8(name_index).unwrap();
+
+		let attribute_type = ModifiedUtf8String::new(attribute_type_constant.bytes).to_string();
+		let attribute_info = match attribute_type.as_str() {
+			"ConstantValue" => Ok(AttributeInfo::ConstantValue(ConstantValue::read_options(reader, endian, ())?)),
+			"Code" => Ok(AttributeInfo::Code(Code::read_options(reader, endian, ())?)),
+			"ExceptionHandler" => Ok(AttributeInfo::ExceptionHandler(ExceptionHandler::read_options(reader, endian, ())?)),
+			"LineNumberTable" => Ok(AttributeInfo::LineNumberTable(LineNumberTable::read_options(reader, endian, ())?)),
+			"StackMapTable" => Ok(AttributeInfo::StackMapTable(StackMapTable::read_options(reader, endian, ())?)),
+			"BootstrapMethods" => Ok(AttributeInfo::BootstrapMethods(BootstrapMethods::read_options(reader, endian, ())?)),
+			"NestHost" => Ok(AttributeInfo::NestHost(NestHost::read_options(reader, endian, ())?)),
+			"NestMembers" => Ok(AttributeInfo::NestMembers(NestMembers::read_options(reader, endian, ())?)),
+			"PermittedSubclass" => Ok(AttributeInfo::PermittedSubclasses(PermittedSubclasses::read_options(reader, endian, ())?)),
+			_ => Err(IndexError { index: 0 })
+		};
+		return Ok(Attribute {
+			name_index,
+			length,
+			attribute_info: attribute_info.unwrap(),
+		});
+	}
+}
+
+#[binrw]
+#[derive(PartialEq, Debug)]
 pub enum AttributeInfo {
 	ConstantValue(ConstantValue),
 	Code(Code),
@@ -26,10 +59,6 @@ pub enum AttributeInfo {
 	PermittedSubclasses(PermittedSubclasses),
 }
 
-struct AttributeReadArgs {
-	constant_pool:  BTreeMap<u16, constant_pool::ConstantPoolItem>,
-}
-
 // An implementation of a ConstantValue attribute (JVMS17 4.7.2)
 #[binrw]
 #[brw(big)]
@@ -40,6 +69,7 @@ pub struct ConstantValue {
 
 #[binrw]
 #[brw(big)]
+#[derive(PartialEq, Debug)]
 pub struct Code {
 	pub max_stack: u16,
 	pub max_locals: u16,
@@ -51,11 +81,12 @@ pub struct Code {
 	pub handlers: Vec<ExceptionHandler>,
 	pub attributes_count: u16,
 	#[br(count = attributes_count as u16)]
-	pub attributes: Vec<Attribute>,
+	pub attributes: Vec<u8>,
 }
 
 #[binrw]
 #[brw(big)]
+#[derive(PartialEq, Debug)]
 pub struct ExceptionHandler {
 	pub start_pc: u16,
 	pub end_pc: u16,
@@ -65,6 +96,7 @@ pub struct ExceptionHandler {
 
 #[binrw]
 #[brw(big)]
+#[derive(PartialEq, Debug)]
 pub struct LineNumberTable {
 	pub lines_count: u32,
 	#[br(count = lines_count as u16)]
@@ -73,6 +105,7 @@ pub struct LineNumberTable {
 
 #[binrw]
 #[brw(big)]
+#[derive(PartialEq, Debug)]
 pub struct Line {
 	pub start_pc: u16,
 	pub line_number: u16,
@@ -80,6 +113,7 @@ pub struct Line {
 
 #[binrw]
 #[brw(big)]
+#[derive(PartialEq, Debug)]
 pub struct StackMapTable {
 	number_of_entries: u8,
 	#[br(count = number_of_entries)]
@@ -88,6 +122,7 @@ pub struct StackMapTable {
 
 #[binrw]
 #[brw(big)]
+#[derive(PartialEq, Debug)]
 pub enum StackMapFrame {
 	SameFrame(SameFrame),
 	SameLocals1StackItemFrame(SameLocals1StackItemFrame),
@@ -101,6 +136,7 @@ pub enum StackMapFrame {
 #[binrw]
 #[brw(big)]
 #[br(assert(frame_type <= 63))]
+#[derive(PartialEq, Debug)]
 pub struct SameFrame {
 	frame_type: u8,
 }
@@ -108,6 +144,7 @@ pub struct SameFrame {
 #[binrw]
 #[brw(big)]
 #[br(assert((63..127).contains(&frame_type)))]
+#[derive(PartialEq, Debug)]
 pub struct SameLocals1StackItemFrame {
 	frame_type: u8,
 	// verification_type_info: VerificationTypeInfo
@@ -116,6 +153,7 @@ pub struct SameLocals1StackItemFrame {
 #[binrw]
 #[brw(big)]
 #[br(assert(frame_type == 247))]
+#[derive(PartialEq, Debug)]
 pub struct SameLocals1StackItemFrameExtended {
 	frame_type: u8,
 	offset_delta: u16,
@@ -125,6 +163,7 @@ pub struct SameLocals1StackItemFrameExtended {
 #[binrw]
 #[brw(big)]
 #[br(assert((248..=250).contains(&frame_type)))]
+#[derive(PartialEq, Debug)]
 pub struct ChopFrame {
 	frame_type: u8,
 	offset_delta: u16,
@@ -133,6 +172,7 @@ pub struct ChopFrame {
 #[binrw]
 #[brw(big)]
 #[br(assert(frame_type == 251))]
+#[derive(PartialEq, Debug)]
 pub struct SameFrameExtended {
 	frame_type: u8,
 	offset_delta: u16
@@ -141,6 +181,7 @@ pub struct SameFrameExtended {
 #[binrw]
 #[brw(big)]
 #[br(assert((252..254).contains(&frame_type)))]
+#[derive(PartialEq, Debug)]
 pub struct AppendFrame {
 	frame_type: u8,
 	offset_delta: u16
@@ -151,6 +192,7 @@ pub struct AppendFrame {
 #[binrw]
 #[brw(big)]
 #[br(assert(frame_type == 255))]
+#[derive(PartialEq, Debug)]
 pub struct FullFrame {
 	frame_type: u8,
 	offset_delta: u16,
@@ -173,6 +215,7 @@ pub struct FullFrame {
 /// } bootstrap_methods[num_bootstrap_methods];
 #[binrw]
 #[brw(big)]
+#[derive(PartialEq, Debug)]
 pub struct BootstrapMethods {
 	num_bootstrap_methods: u16,
 	#[br(count = num_bootstrap_methods)]
@@ -186,6 +229,7 @@ pub struct BootstrapMethods {
 /// } bootstrap_methods[num_bootstrap_methods];
 #[binrw]
 #[brw(big)]
+#[derive(PartialEq, Debug)]
 pub struct BootstrapMethodEntry {
 	bootstrap_method_ref: u16,
 	num_bootstrap_arguments: u16,
@@ -201,6 +245,7 @@ pub struct BootstrapMethodEntry {
 ///	}
 #[binrw]
 #[brw(big)]
+#[derive(PartialEq, Debug)]
 pub struct NestHost {
 	host_class_index: u16,
 }
@@ -216,6 +261,7 @@ pub struct NestHost {
 ///
 #[binrw]
 #[brw(big)]
+#[derive(PartialEq, Debug)]
 pub struct NestMembers {
 	number_of_classes: u16,
 	#[br(count = number_of_classes)]
@@ -225,6 +271,7 @@ pub struct NestMembers {
 /// An implementation of PermittedSubclasses (JVMS17 4.7.31).
 #[binrw]
 #[brw(big)]
+#[derive(PartialEq, Debug)]
 pub struct PermittedSubclasses {
 	number_of_classes: u16,
 	#[br(count = number_of_classes)]
