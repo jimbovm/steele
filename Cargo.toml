@@ -6,6 +6,7 @@ license = "EPL-2.0"
 
 [dependencies]
 binrw = "0"
+num_enum = "0"
 regex = "1"
 strum = "0"
 strum_macros = "0"

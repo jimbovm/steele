@@ -2,6 +2,9 @@ extern crate strum;
 
 use std::fmt;
 use std::sync::LazyLock;
+use num_enum::{
+	IntoPrimitive,
+	TryFromPrimitive};
 use regex::Regex;
 use strum_macros::EnumIter;
 
@@ -10,7 +13,15 @@ static MATCH_DUPX_XX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^(?<operat
 static MATCH_IF_XCMP: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^If(?<type>[IA])(?<operation>Cmp[A-Za-z]{2})$").unwrap());
 static MATCH_X_W: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^(?<operation>.*)W$").unwrap());
 
-#[derive(Debug, EnumIter)]
+#[derive(
+	Clone,
+	Debug,
+	EnumIter,
+	Eq,
+	IntoPrimitive,
+	PartialEq,
+	TryFromPrimitive)]
+#[repr(u8)]
 pub enum Opcode {
 	// constant
 	Nop = 0x00,
