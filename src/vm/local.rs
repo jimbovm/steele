@@ -8,6 +8,7 @@ use crate::{
 	vm::types::*,
 };
 
+/// An encapsulation of a local variable array for a stack frame.
 pub struct Locals {
 	pub variables: HashMap<u32, Variable>
 }
