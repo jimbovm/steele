@@ -5,6 +5,8 @@ use crate::{
 		 operand_stack::OperandStack}};
 
 pub struct StackFrame {
+	/// Program counter, pointer to position in bytecode
+	pub pc: u32,
 	/// Operand stack for this frame
 	pub operand_stack: OperandStack,
 	/// Local variables for the currently running method
@@ -12,5 +14,5 @@ pub struct StackFrame {
 	/// Reference to class constant pool
 	pub constant_pool: BTreeMap<u32, ConstantPoolItem>,
 	/// Java bytecode
-	pub code: u32,
+	pub code: Vec<u8>,
 }
