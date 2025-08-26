@@ -1,8 +1,14 @@
 use std::error::Error;
 
 use crate::{
-	isa::opcode::Opcode, vm::{
-		frame::StackFrame, interpreter, types::*}};
+	make_pop_load,
+	make_push,
+	make_integer_arithmetic_logic,
+	make_float_arithmetic,
+	isa::opcode::Opcode,
+	vm::{
+		frame::StackFrame,
+		types::*}};
 
 #[derive(Debug, Default)]
 pub struct Interpreter {
@@ -24,42 +30,18 @@ impl Interpreter {
 		Opcode::try_from(byte).expect("Invalid opcode")
 	}
 
-	pub fn ipop(&mut self) -> i32 {
-		i32::from_be_bytes([
-			self.frame.operand_stack.pop(),
-			self.frame.operand_stack.pop(),
-			self.frame.operand_stack.pop(),
-			self.frame.operand_stack.pop()
-		])
-	}
-
-	pub fn ipush(&mut self, value: i32) {
-		self.frame.operand_stack.push(&i32::to_le_bytes(value));
-	}
-
-	fn iload(&mut self, index: u16) -> Result<Int, Box<dyn Error>> {
-		let local = self.frame.locals.get_int(index)?;
-		self.frame.operand_stack.push(&local.value.to_be_bytes());
-		Ok(local)
-	}
-
-	fn lload(&mut self, index: u16) -> Result<Long, Box<dyn Error>> {
-		let local = self.frame.locals.get_long(index)?;
-		self.frame.operand_stack.push(&local.value.to_be_bytes());
-		Ok(local)
-	}
-
-	fn fload(&mut self, index: u16) -> Result<Float, Box<dyn Error>> {
-		let local = self.frame.locals.get_float(index)?;
-		self.frame.operand_stack.push(&local.value.to_be_bytes());
-		Ok(local)
-	}
-
-	fn dload(&mut self, index: u16) -> Result<Double, Box<dyn Error>> {
-		let local = self.frame.locals.get_double(index)?;
-		self.frame.operand_stack.push(&local.value.to_be_bytes());
-		Ok(local)
-	}
+	make_pop_load!(i, i32, Int, get_int, 4);
+	make_push!(i, i32);
+	make_pop_load!(l, i64, Long, get_long, 8);
+	make_push!(l, i64);
+	make_pop_load!(f, f32, Float, get_float, 4);
+	make_push!(f, f32);
+	make_pop_load!(d, f64, Double, get_double, 8);
+	make_push!(d, f64);
+	make_integer_arithmetic_logic!(i, i32);
+	make_integer_arithmetic_logic!(l, i64);
+	make_float_arithmetic!(f, f32);
+	make_float_arithmetic!(d, f64);
 
 	pub fn execute(&mut self) -> Result<usize, Box<dyn Error>> {
 		loop {
@@ -211,81 +193,42 @@ impl Interpreter {
 				Opcode::Dup2X1 => todo!(),
 				Opcode::Dup2X2 => todo!(),
 				Opcode::Swap => todo!(),
-				Opcode::IAdd => {
-					let lhs = self.ipop();
-					let rhs = self.ipop();
-					self.ipush(lhs.wrapping_add(rhs));
-				}
-				Opcode::LAdd => todo!(),
+				Opcode::IAdd => { self.iadd(); }
+				Opcode::LAdd => { self.ladd(); }
 				Opcode::FAdd => todo!(),
 				Opcode::DAdd => todo!(),
-				Opcode::ISub => {
-					let lhs = self.ipop();
-					let rhs = self.ipop();
-					self.ipush(lhs.wrapping_sub(rhs));
-				},
-				Opcode::LSub => todo!(),
-				Opcode::FSub => todo!(),
-				Opcode::DSub => todo!(),
-				Opcode::IMul => {
-					let lhs = self.ipop();
-					let rhs = self.ipop();
-					self.ipush(lhs.wrapping_mul(rhs));
-				},
-				Opcode::LMul => todo!(),
-				Opcode::FMul => todo!(),
-				Opcode::DMul => todo!(),
-				Opcode::IDiv => {
-					let lhs = self.ipop();
-					let rhs = self.ipop();
-					self.ipush(lhs.wrapping_div(rhs));
-				},
-				Opcode::LDiv => todo!(),
-				Opcode::FDiv => todo!(),
-				Opcode::DDiv => todo!(),
+				Opcode::ISub => { self.isub(); },
+				Opcode::LSub => { self.lsub(); },
+				Opcode::FSub => { self.fsub(); }
+				Opcode::DSub => { self.dsub(); }
+				Opcode::IMul => { self.imul(); }
+				Opcode::LMul => { self.lmul(); }
+				Opcode::FMul => { self.fmul(); }
+				Opcode::DMul => { self.dmul(); }
+				Opcode::IDiv => { self.idiv(); }
+				Opcode::LDiv => { self.ldiv(); }
+				Opcode::FDiv => { self.fdiv(); }
+				Opcode::DDiv => { self.ddiv(); }
 				Opcode::IRem => todo!(),
 				Opcode::LRem => todo!(),
 				Opcode::FRem => todo!(),
 				Opcode::DRem => todo!(),
-				Opcode::INeg => {
-					let val = self.ipop();
-					self.ipush(-val);
-				},
-				Opcode::LNeg => todo!(),
-				Opcode::FNeg => todo!(),
-				Opcode::DNeg => todo!(),
-				Opcode::IShl => todo!(),
-				Opcode::LShl => {
-					let lhs = self.ipop();
-					let rhs = self.ipop();
-					self.ipush(lhs << (rhs & 0x1F));
-				}
-				Opcode::IShr => {
-					let lhs = self.ipop();
-					let rhs = self.ipop();
-					self.ipush(lhs >> (rhs & 0x1F));
-				},
-				Opcode::LShr => todo!(),
+				Opcode::INeg => { self.ineg(); }
+				Opcode::LNeg => { self.lneg(); }
+				Opcode::FNeg => { self.fneg(); }
+				Opcode::DNeg => { self.dneg(); }
+				Opcode::IShl => { self.ishl(); }
+				Opcode::LShl => { self.lshl(); }
+				Opcode::IShr => { self.ishr(); }
+				Opcode::LShr => { self.lshr(); }
 				Opcode::IUShr => todo!(),
 				Opcode::LUShr => todo!(),
-				Opcode::IAnd => {
-					let lhs = self.ipop();
-					let rhs = self.ipop();
-					self.ipush(lhs & rhs);
-				},
-				Opcode::LAnd => todo!(),
-				Opcode::IOr => {
-					let lhs = self.ipop();
-					let rhs = self.ipop();
-					self.ipush(lhs | rhs);
-				}
-				Opcode::LOr => todo!(),
-				Opcode::IXor => {
-					let lhs = self.ipop();
-					let rhs = self.ipop();
-					self.ipush(lhs ^ rhs);
-				}
-				Opcode::LXor => todo!(),
+				Opcode::IAnd => { self.iand(); }
+				Opcode::LAnd => { self.land(); }
+				Opcode::IOr => { self.ior(); }
+				Opcode::LOr => { self.lor(); }
+				Opcode::IXor => { self.ixor(); }
+				Opcode::LXor => { self.lxor(); }
 				Opcode::IInc => todo!(),
 				Opcode::I2L => todo!(),
 				Opcode::I2F => todo!(),
@@ -365,21 +308,28 @@ impl Interpreter {
 }
 
 mod tests {
-    use std::{collections::{BTreeMap, HashMap}};
+	use std::{collections::{BTreeMap, HashMap}};
 
-    use crate::{
+	use crate::{
 		isa::opcode::Opcode,
 		vm::interpreter::Interpreter};
 
 
 	#[test]
 	fn test_int_operations() {
-		let cases: [(i32, i32, Opcode, i32); 6] = [
+		let cases: Vec<(i32, i32, Opcode, i32)> = vec![
 			(1, 1, Opcode::IAdd, 2),
+			(100, -1, Opcode::IAdd, 99),
 			(1, 1, Opcode::ISub, 0),
 			(0, 1, Opcode::ISub, -1),
+			(i32::MIN, 1, Opcode::ISub, i32::MAX),
 			(2, 2, Opcode::IMul, 4),
 			(4, 2, Opcode::IDiv, 2),
+			(1, 1, Opcode::IAnd, 1),
+			(1, 1, Opcode::IOr, 1),
+			(0, 0, Opcode::IOr, 0),
+			(1, 0, Opcode::IXor, 1),
+			(1, 1, Opcode::IShl, 2),
 			(300, 0, Opcode::INeg, -300),
 		];
 
