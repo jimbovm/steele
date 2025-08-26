@@ -79,66 +79,34 @@ impl Interpreter {
 					let index: u16 = u16::from_be_bytes([self.frame.operand_stack.pop(), self.frame.operand_stack.pop()]);
 					self.iload(index)?;
 				}
-				Opcode::ILoad0 => {
-					self.iload(0)?;
-				}
-				Opcode::ILoad1 => {
-					self.iload(1)?;
-				}
-				Opcode::ILoad2 => {
-					self.iload(2)?;
-				}
-				Opcode::ILoad3 => {
-					self.iload(3)?;
-				}
+				Opcode::ILoad0 => { self.iload(0)?; }
+				Opcode::ILoad1 => { self.iload(1)?; }
+				Opcode::ILoad2 => {	self.iload(2)?; }
+				Opcode::ILoad3 => {	self.iload(3)?; }
 				Opcode::LLoad => {
 					let index: u16 = u16::from_be_bytes([self.frame.operand_stack.pop(), self.frame.operand_stack.pop()]);
 					self.lload(index)?;
 				},
-				Opcode::LLoad0 => {
-					self.lload(0)?;
-				},
-				Opcode::LLoad1 => {
-					self.lload(1)?;
-				},
-				Opcode::LLoad2 => {
-					self.lload(2)?;
-				},
-				Opcode::LLoad3 => {
-					self.lload(3)?;
-				},
+				Opcode::LLoad0 => {	self.lload(0)?; },
+				Opcode::LLoad1 => {	self.lload(1)?; },
+				Opcode::LLoad2 => {	self.lload(2)?; },
+				Opcode::LLoad3 => { self.lload(3)?; },
 				Opcode::FLoad => {
 					let index: u16 = u16::from_be_bytes([self.frame.operand_stack.pop(), self.frame.operand_stack.pop()]);
 					self.fload(index)?;
 				},
-				Opcode::FLoad0 => {
-					self.dload(0)?;
-				},
-				Opcode::FLoad1 => {
-					self.dload(1)?;
-				},
-				Opcode::FLoad2 => {
-					self.dload(2)?;
-				},
-				Opcode::FLoad3 => {
-					self.dload(3)?;
-				},
+				Opcode::FLoad0 => {	self.dload(0)?; },
+				Opcode::FLoad1 => {	self.dload(1)?; },
+				Opcode::FLoad2 => {	self.dload(2)?; },
+				Opcode::FLoad3 => {	self.dload(3)?; },
 				Opcode::DLoad => {
 					let index: u16 = u16::from_be_bytes([self.frame.operand_stack.pop(), self.frame.operand_stack.pop()]);
 					self.dload(index)?;
 				},
-				Opcode::DLoad0 => {
-					self.dload(0)?;
-				},
-				Opcode::DLoad1 => {
-					self.dload(1)?;
-				},
-				Opcode::DLoad2 => {
-					self.dload(2)?;
-				},
-				Opcode::DLoad3 => {
-					self.dload(3)?;
-				},
+				Opcode::DLoad0 => { self.dload(0)?; },
+				Opcode::DLoad1 => {	self.dload(1)?; },
+				Opcode::DLoad2 => { self.dload(2)?; },
+				Opcode::DLoad3 => { self.dload(3)?; },
 				Opcode::ALoad0 => todo!(),
 				Opcode::ALoad1 => todo!(),
 				Opcode::ALoad2 => todo!(),
