@@ -1,8 +1,8 @@
 # Steele
 
-Steele is intended to be a toy Java Virtual Machine (and who knows, perhaps a serious one eventually) implemented in Rust. It was begun as an excuse to both learn Rust and explore JVM internals.
+Steele is intended to be a toy Java Virtual Machine (and who knows, perhaps a serious one eventually) implemented in Rust. It was begun as an excuse both to learn Rust and explore JVM internals.
 
-At present, Steele features functionality for parsing Java class files.
+At present, Steele features functionality for parsing Java class files and an incomplete implementation of the arithmetic and logic parts of the ISA.
 
 Steele is both a reference to Rust and to Guy Steele, one of the inventors of the Java platform.
 
