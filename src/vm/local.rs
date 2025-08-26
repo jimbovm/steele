@@ -9,17 +9,18 @@ use crate::{
 };
 
 /// An encapsulation of a local variable array for a stack frame.
+#[derive(Debug, Default)]
 pub struct Locals {
-	pub variables: HashMap<u32, Variable>
+	pub variables: HashMap<u16, Variable>
 }
 
 impl Locals {
 
 	/// Create a new local variable map, observing the rules for doubles and longs.
 	pub fn new(raw_variables: Vec<Variable>) -> Result<Locals, VariableError> {
-		let mut variables: HashMap<u32, Variable> = HashMap::new();
+		let mut variables: HashMap<u16, Variable> = HashMap::new();
 		let mut modifier = 0;
-		for i in 0..(raw_variables.len() as u32) {
+		for i in 0..raw_variables.len() as u16 {
 			let var = raw_variables.get(i as usize);
 			match var {
 				Some(Variable::Double(d)) => {
@@ -44,7 +45,7 @@ impl Locals {
 	make_local_accessor!(get_boolean, Boolean, "Boolean");
 	make_local_accessor!(get_byte, Byte, "Byte");
 	make_local_accessor!(get_char, Char, "Char");
-	make_local_accessor!(get_integer, Int, "Int");
+	make_local_accessor!(get_int, Int, "Int");
 	make_local_accessor!(get_float, Float, "Float");
 	make_local_accessor!(get_long, Long, "Long");
 	make_local_accessor!(get_short, Short, "Short");
@@ -61,7 +62,7 @@ macro_rules! make_local_accessor {
 	 $variable_type: ident,
 	 $wanted_type: literal
 	) => {
-		pub fn $fn_name(&self, index: u32) -> Result<$variable_type, Box<dyn Error>> {
+		pub fn $fn_name(&self, index: u16) -> Result<$variable_type, Box<dyn Error>> {
 			let variable = self.variables.get(&index);
 			match variable {
 				Some(variable) => {

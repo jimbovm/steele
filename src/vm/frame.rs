@@ -1,9 +1,10 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 
 use crate::{
 	class::constant_pool::ConstantPoolItem, vm::{local::Locals,
 		 operand_stack::OperandStack}};
 
+#[derive(Debug, Default)]
 pub struct StackFrame {
 	/// Program counter, pointer to position in bytecode
 	pub pc: u32,
@@ -15,4 +16,16 @@ pub struct StackFrame {
 	pub constant_pool: BTreeMap<u32, ConstantPoolItem>,
 	/// Java bytecode
 	pub code: Vec<u8>,
+}
+
+impl StackFrame {
+
+	pub fn new() -> StackFrame {
+		let frame = StackFrame {
+			pc: 0,
+			operand_stack: OperandStack { max_depth: usize::MAX, stack: Vec::new() },
+			locals: Locals { variables: HashMap::new() },
+			constant_pool: BTreeMap::new(), code: Vec::new() };
+		frame
+	}
 }
