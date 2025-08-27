@@ -133,3 +133,60 @@ macro_rules! make_float_arithmetic {
 		}
 	};
 }
+
+#[macro_export]
+macro_rules! make_conditional_branches {
+	($condition_name:ident,
+	 $operator:tt) => {
+		pub fn ${concat (if_icmp, $condition_name)}(&mut self) {
+			let offset_high = self.frame.code[(self.frame.pc+1) as usize];
+			let offset_low = self.frame.code[(self.frame.pc+2) as usize];
+			let offset = i16::from_be_bytes([offset_high, offset_low]);
+			self.frame.pc += if (self.ipop() $operator self.ipop()) { (offset as u32) } else { 2 };
+		}
+
+		pub fn ${concat (if_, $condition_name)}(&mut self) {
+			let offset_high = self.frame.code[(self.frame.pc+1) as usize];
+			let offset_low = self.frame.code[(self.frame.pc+2) as usize];
+			let offset = i16::from_be_bytes([offset_high, offset_low]);
+			self.frame.pc += if (self.ipop() $operator 0) { (offset as u32) } else { 2 };
+		}
+	}
+}
+
+#[macro_export]
+macro_rules! make_float_comparisons {
+	($prefix:ident,
+	 $rust_type:ty) => {
+		fn ${ concat($prefix, "cmp") }(&mut self, value_1: $rust_type, value_2: $rust_type) -> i32 {
+			if value_1 > value_2 {
+				return 1;
+			} else if value_1 < value_2 {
+				return -1;
+			}
+			else if value_1 == value_2 {
+				return 0;
+			}
+			// if we're here, we have at least one NaN
+			return -2;
+		}
+
+		pub fn ${ concat($prefix, "cmpg") }(&mut self) {
+			let value_1: $rust_type = self.${ concat($prefix, "pop") }();
+			let value_2: $rust_type = self.${ concat($prefix, "pop") }();
+			match self.${ concat($prefix, "cmp") }(value_1, value_2) {
+				-2 => { self.ipush(1); }
+				anything_else => { self.ipush(anything_else); }
+			}
+		}
+
+		pub fn ${ concat($prefix, "cmpl") }(&mut self) {
+			let value_1: $rust_type = self.${ concat($prefix, "pop") }();
+			let value_2: $rust_type = self.${ concat($prefix, "pop") }();
+			match self.${ concat($prefix, "cmp") }(value_1, value_2) {
+				-2 => { self.ipush(-1); }
+				anything_else => { self.ipush(anything_else); }
+			}
+		}
+	};
+}

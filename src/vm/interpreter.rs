@@ -1,12 +1,13 @@
 use std::error::Error;
 
 use crate::{
-	make_pop_load,
-	make_push,
-	make_integer_arithmetic_logic,
+	isa::opcode::Opcode, 
+	make_conditional_branches,
 	make_float_arithmetic,
-	isa::opcode::Opcode,
-	vm::{
+	make_float_comparisons,
+	make_integer_arithmetic_logic,
+	make_pop_load,
+	make_push, vm::{
 		frame::StackFrame,
 		types::*}};
 
@@ -42,6 +43,16 @@ impl Interpreter {
 	make_integer_arithmetic_logic!(l, i64);
 	make_float_arithmetic!(f, f32);
 	make_float_arithmetic!(d, f64);
+
+	make_float_comparisons!(f, f32);
+	make_float_comparisons!(d, f64);
+
+	make_conditional_branches!(eq, ==);
+	make_conditional_branches!(ne, !=);
+	make_conditional_branches!(lt, <);
+	make_conditional_branches!(ge, >=);
+	make_conditional_branches!(gt, <);
+	make_conditional_branches!(le, <=);
 
 	pub fn execute(&mut self) -> Result<usize, Box<dyn Error>> {
 		loop {
@@ -152,19 +163,33 @@ impl Interpreter {
 				Opcode::BAStore => todo!(),
 				Opcode::CAStore => todo!(),
 				Opcode::SAStore => todo!(),
-				Opcode::Pop => todo!(),
-				Opcode::Pop2 => todo!(),
-				Opcode::Dup => todo!(),
+				Opcode::Pop => {
+					self.ipop();
+				},
+				Opcode::Pop2 => {
+					self.ipop();
+					self.ipop();
+				},
+				Opcode::Dup => {
+					let val = self.ipop();
+					self.ipush(val);
+					self.ipush(val);
+				}
 				Opcode::DupX1 => todo!(),
 				Opcode::DupX2 => todo!(),
 				Opcode::Dup2 => todo!(),
 				Opcode::Dup2X1 => todo!(),
 				Opcode::Dup2X2 => todo!(),
-				Opcode::Swap => todo!(),
+				Opcode::Swap =>{
+					let value_2 = self.ipop();
+					let value_1 = self.ipop();
+					self.ipush(value_2);
+					self.ipush(value_1);
+				},
 				Opcode::IAdd => { self.iadd(); }
 				Opcode::LAdd => { self.ladd(); }
-				Opcode::FAdd => todo!(),
-				Opcode::DAdd => todo!(),
+				Opcode::FAdd => { self.fadd(); }
+				Opcode::DAdd => { self.dadd(); }
 				Opcode::ISub => { self.isub(); }
 				Opcode::LSub => { self.lsub(); }
 				Opcode::FSub => { self.fsub(); }
@@ -189,8 +214,28 @@ impl Interpreter {
 				Opcode::LShl => { self.lshl(); }
 				Opcode::IShr => { self.ishr(); }
 				Opcode::LShr => { self.lshr(); }
-				Opcode::IUShr => todo!(),
-				Opcode::LUShr => todo!(),
+				Opcode::IUShr => {
+					let value_1 = self.ipop();
+					let value_2 = self.ipop();
+					let s = value_2 & 0x1F;
+					if value_1 > 0 {
+						self.ipush(value_1 >> s);
+					}
+					else {
+						self.ipush((value_1 >> s) + (2 << !s));
+					}
+				},
+				Opcode::LUShr => {
+					let value_1 = self.lpop();
+					let value_2 = self.lpop();
+					let s = value_2 & 0x3F;
+					if value_1 > 0 {
+						self.lpush(value_1 >> s);
+					}
+					else {
+						self.lpush((value_1 >> s) + (2 << !s));
+					}
+				},
 				Opcode::IAnd => { self.iand(); }
 				Opcode::LAnd => { self.land(); }
 				Opcode::IOr => { self.ior(); }
@@ -213,23 +258,29 @@ impl Interpreter {
 				Opcode::I2B => {todo!()},
 				Opcode::I2C => todo!(),
 				Opcode::I2S => todo!(),
-				Opcode::LCmp => todo!(),
-				Opcode::FCmpL => todo!(),
-				Opcode::FCmpG => todo!(),
-				Opcode::DCmpL => todo!(),
-				Opcode::DCmpG => todo!(),
-				Opcode::IfEq => todo!(),
-				Opcode::IfNe => todo!(),
-				Opcode::IfLt => todo!(),
-				Opcode::IfGe => todo!(),
-				Opcode::IfGt => todo!(),
-				Opcode::IfLe => todo!(),
-				Opcode::IfICmpEq => todo!(),
-				Opcode::IfICmpNe => todo!(),
-				Opcode::IfICmpLt => todo!(),
-				Opcode::IfICmpGe => todo!(),
-				Opcode::IfICmpGt => todo!(),
-				Opcode::IfICmpLe => todo!(),
+				Opcode::LCmp => {
+					let value_1 = self.lpop();
+					let value_2 = self.lpop();
+					if value_1 > value_2 { self.ipush(1); }
+					else if value_1 < value_2 {	self.ipush(-1);	}
+					else { self.ipush(0); }
+				},
+				Opcode::FCmpL => { self.fcmpl(); }
+				Opcode::FCmpG => { self.fcmpg(); }
+				Opcode::DCmpL => { self.dcmpl(); }
+				Opcode::DCmpG => { self.dcmpl(); }
+				Opcode::IfEq => { self.if_eq(); }
+				Opcode::IfNe => { self.if_ne(); }
+				Opcode::IfLt => { self.if_lt(); }
+				Opcode::IfGe => { self.if_ge(); }
+				Opcode::IfGt => { self.if_gt(); }
+				Opcode::IfLe => { self.if_le(); }
+				Opcode::IfICmpEq => { self.if_icmpeq(); }
+				Opcode::IfICmpNe => { self.if_icmpne(); }
+				Opcode::IfICmpLt => { self.if_icmplt(); }
+				Opcode::IfICmpGe => { self.if_icmpge(); }
+				Opcode::IfICmpGt => { self.if_icmpgt(); }
+				Opcode::IfICmpLe => { self.if_icmple(); }
 				Opcode::IfACmpEq => todo!(),
 				Opcode::IfACmpNe => todo!(),
 				Opcode::Goto => todo!(),
@@ -268,8 +319,12 @@ impl Interpreter {
 				Opcode::GotoW => todo!(),
 				Opcode::JsrW => todo!(),
 				Opcode::Breakpoint => todo!(),
-				Opcode::Impdep1 => todo!(),
-				Opcode::Impdep2 => todo!(),
+				Opcode::Impdep1 => {
+					// do nothing
+				},
+				Opcode::Impdep2 => {
+					// do nothing
+				},
 			}
 		}
 	}
