@@ -165,8 +165,8 @@ impl Interpreter {
 				Opcode::LAdd => { self.ladd(); }
 				Opcode::FAdd => todo!(),
 				Opcode::DAdd => todo!(),
-				Opcode::ISub => { self.isub(); },
-				Opcode::LSub => { self.lsub(); },
+				Opcode::ISub => { self.isub(); }
+				Opcode::LSub => { self.lsub(); }
 				Opcode::FSub => { self.fsub(); }
 				Opcode::DSub => { self.dsub(); }
 				Opcode::IMul => { self.imul(); }
@@ -283,9 +283,34 @@ mod tests {
 		vm::interpreter::Interpreter};
 
 
+	macro_rules! integer_test_cases {
+		($rust_type:ty,
+		 $prefix:ident) => {
+		fn ${ concat(run_, $prefix, _, test_cases)}(cases: Vec<($rust_type, $rust_type, Opcode, $rust_type)>) {
+			for case in cases {
+				let mut interpreter = Interpreter::new();
+				let value1 = case.0;
+				let value2 = case.1;
+				let opcode = case.2;
+				let expected = case.3;
+				if opcode != Opcode::INeg {
+					interpreter.${ concat($prefix, push) }(value2);
+				}
+				interpreter.${ concat($prefix, push) }(value1);
+				interpreter.frame.code.push(opcode as u8);
+				interpreter.execute();
+				assert_eq!(interpreter.${ concat($prefix, pop) }(), expected);
+				}
+			}
+		};
+	}
+
+	integer_test_cases!(i32, i);
+	integer_test_cases!(i64, l);
+
 	#[test]
 	fn test_int_operations() {
-		let cases: Vec<(i32, i32, Opcode, i32)> = vec![
+		let i_cases: Vec<(i32, i32, Opcode, i32)> = vec![
 			(1, 1, Opcode::IAdd, 2),
 			(100, -1, Opcode::IAdd, 99),
 			(1, 1, Opcode::ISub, 0),
@@ -300,20 +325,26 @@ mod tests {
 			(1, 1, Opcode::IShl, 2),
 			(300, 0, Opcode::INeg, -300),
 		];
+		run_i_test_cases(i_cases);
+	}
 
-		for case in cases {
-			let mut interpreter = Interpreter::new();
-			let value1 = case.0;
-			let value2 = case.1;
-			let opcode = case.2;
-			let expected = case.3;
-			if opcode != Opcode::INeg {
-				interpreter.ipush(value2);
-			}
-			interpreter.ipush(value1);
-			interpreter.frame.code.push(opcode as u8);
-			interpreter.execute();
-			assert_eq!(interpreter.ipop(), expected);
-		}
+	#[test]
+	fn test_long_operations() {
+		let l_cases: Vec<(i64, i64, Opcode, i64)> = vec![
+			(1, 1, Opcode::LAdd, 2),
+			(100, -1, Opcode::LAdd, 99),
+			(1, 1, Opcode::LSub, 0),
+			(0, 1, Opcode::LSub, -1),
+			(i64::MIN, 1, Opcode::LSub, i64::MAX),
+			(2, 2, Opcode::LMul, 4),
+			(4, 2, Opcode::LDiv, 2),
+			(1, 1, Opcode::LAnd, 1),
+			(1, 1, Opcode::LOr, 1),
+			(0, 0, Opcode::LOr, 0),
+			(1, 0, Opcode::LXor, 1),
+			(1, 1, Opcode::LShl, 2),
+			(300, 0, Opcode::LNeg, -300),
+		];
+		run_l_test_cases(l_cases);
 	}
 }
