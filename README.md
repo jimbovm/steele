@@ -1,3 +1,4 @@
+![logo.png](logo.png "Steele logo")
 # Steele
 
 Steele is intended to be a toy Java Virtual Machine (and who knows, perhaps a serious one eventually) implemented in Rust. It was begun as an excuse both to learn Rust and explore JVM internals.
