@@ -139,17 +139,17 @@ macro_rules! make_conditional_branches {
 	($condition_name:ident,
 	 $operator:tt) => {
 		pub fn ${concat (if_icmp, $condition_name)}(&mut self) {
-			let offset_high = self.frame.code[(self.frame.pc+1) as usize];
-			let offset_low = self.frame.code[(self.frame.pc+2) as usize];
+			let offset_high = self.frame.code[(self.frame.pc) as usize];
+			let offset_low = self.frame.code[(self.frame.pc+1) as usize];
 			let offset = i16::from_be_bytes([offset_high, offset_low]);
-			self.frame.pc += if (self.ipop() $operator self.ipop()) { (offset as u32) } else { 2 };
+			self.frame.pc += if (self.ipop() $operator self.ipop()) { ((offset-1) as u32) } else { 2 };
 		}
 
 		pub fn ${concat (if_, $condition_name)}(&mut self) {
-			let offset_high = self.frame.code[(self.frame.pc+1) as usize];
-			let offset_low = self.frame.code[(self.frame.pc+2) as usize];
+			let offset_high = self.frame.code[(self.frame.pc) as usize];
+			let offset_low = self.frame.code[(self.frame.pc+1) as usize];
 			let offset = i16::from_be_bytes([offset_high, offset_low]);
-			self.frame.pc += if (self.ipop() $operator 0) { (offset as u32) } else { 2 };
+			self.frame.pc += if (self.ipop() $operator 0) { ((offset-1) as u32) } else { 2 };
 		}
 	}
 }

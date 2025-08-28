@@ -51,12 +51,12 @@ impl Interpreter {
 	make_conditional_branches!(ne, !=);
 	make_conditional_branches!(lt, <);
 	make_conditional_branches!(ge, >=);
-	make_conditional_branches!(gt, <);
+	make_conditional_branches!(gt, >);
 	make_conditional_branches!(le, <=);
 
 	pub fn execute(&mut self) -> Result<usize, Box<dyn Error>> {
 		loop {
-			if self.frame.pc == self.frame.code.len() as u32 {
+			if self.frame.pc >= self.frame.code.len() as u32 {
 				break Ok(0);
 			}
 			let byte = self.fetch();
@@ -401,5 +401,44 @@ mod tests {
 			(300, 0, Opcode::LNeg, -300),
 		];
 		run_l_test_cases(l_cases);
+	}
+
+	/// Test conditional branches.
+	///
+	/// If the check results in a branch, the PC will be set to 16 which will break the interpreter loop.
+	/// If the check does not result in a branch, execution will continue to byte 3 (nop) which will 
+	/// increment the PC to 4.
+	#[test]
+	fn test_zero_conditional_branches() {
+		let cases = vec![
+			(Opcode::IfEq, 0, 16),
+			(Opcode::IfEq, 1, 4),
+			(Opcode::IfGt, 1, 16),
+			(Opcode::IfGt, 0, 4),
+			(Opcode::IfLt, 0, 4),
+			(Opcode::IfLt, -1, 16),
+			(Opcode::IfGe, 0, 16),
+			(Opcode::IfGe, 1, 16),
+			(Opcode::IfGe, -1, 4),
+			(Opcode::IfLe, 0, 16),
+			(Opcode::IfLe, 1, 4),
+			(Opcode::IfLe, -1, 16),
+		];
+		for case in cases {
+			let opcode = case.0 as u8;
+			let value = &case.1;
+			let expected_pc = case.2;
+			let mut interpreter = Interpreter::new();
+			interpreter.ipush(*value);
+			interpreter.frame.code = vec![
+				opcode, // 0
+				0u8, // 1
+				16u8, // 2
+				Opcode::Nop as u8 // 3
+			];
+			interpreter.execute();
+			assert_eq!(interpreter.frame.pc, expected_pc);
+		}
+
 	}
 }
