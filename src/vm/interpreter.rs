@@ -202,10 +202,10 @@ impl Interpreter {
 				Opcode::LDiv => { self.ldiv(); }
 				Opcode::FDiv => { self.fdiv(); }
 				Opcode::DDiv => { self.ddiv(); }
-				Opcode::IRem => todo!(),
-				Opcode::LRem => todo!(),
-				Opcode::FRem => todo!(),
-				Opcode::DRem => todo!(),
+				Opcode::IRem => { self.irem(); }
+				Opcode::LRem => { self.lrem(); }
+				Opcode::FRem => { self.frem(); }
+				Opcode::DRem => { self.drem(); }
 				Opcode::INeg => { self.ineg(); }
 				Opcode::LNeg => { self.lneg(); }
 				Opcode::FNeg => { self.fneg(); }
@@ -268,7 +268,7 @@ impl Interpreter {
 				Opcode::FCmpL => { self.fcmpl(); }
 				Opcode::FCmpG => { self.fcmpg(); }
 				Opcode::DCmpL => { self.dcmpl(); }
-				Opcode::DCmpG => { self.dcmpl(); }
+				Opcode::DCmpG => { self.dcmpg(); }
 				Opcode::IfEq => { self.if_eq(); }
 				Opcode::IfNe => { self.if_ne(); }
 				Opcode::IfLt => { self.if_lt(); }
@@ -337,7 +337,7 @@ mod tests {
 		isa::opcode::Opcode,
 		vm::interpreter::Interpreter};
 
-	macro_rules! integer_test_cases {
+	macro_rules! make_arithmetic_logic_test_cases {
 		($rust_type:ty,
 		 $prefix:ident) => {
 		fn ${ concat(run_, $prefix, _, test_cases)}(cases: Vec<($rust_type, $rust_type, Opcode, $rust_type)>) {
@@ -347,7 +347,7 @@ mod tests {
 				let value2 = case.1;
 				let opcode = case.2;
 				let expected = case.3;
-				if opcode != Opcode::INeg {
+				if vec![Opcode::INeg, Opcode::LNeg, Opcode::FNeg, Opcode::DNeg].contains(&opcode) == false {
 					interpreter.${ concat($prefix, push) }(value2);
 				}
 				interpreter.${ concat($prefix, push) }(value1);
@@ -359,8 +359,34 @@ mod tests {
 		};
 	}
 
-	integer_test_cases!(i32, i);
-	integer_test_cases!(i64, l);
+	macro_rules! make_nan_test_cases {
+		($rust_type:ty,
+		 $prefix:ident) => {
+		fn ${ concat(run_, $prefix, _, nan_test_cases)}(cases: Vec<($rust_type, $rust_type, Opcode, $rust_type)>) {
+			for case in cases {
+				let mut interpreter = Interpreter::new();
+				let value1 = case.0;
+				let value2 = case.1;
+				let opcode = case.2;
+				let expected = case.3;
+				if vec![Opcode::FNeg, Opcode::DNeg].contains(&opcode) == false {
+					interpreter.${ concat($prefix, push) }(value2);
+				}
+				interpreter.${ concat($prefix, push) }(value1);
+				interpreter.frame.code.push(opcode as u8);
+				interpreter.execute();
+				assert!((interpreter.${ concat($prefix, pop) }()).is_nan());
+				}
+			}
+		};
+	}
+
+	make_arithmetic_logic_test_cases!(i32, i);
+	make_arithmetic_logic_test_cases!(i64, l);
+	make_arithmetic_logic_test_cases!(f32, f);
+	make_arithmetic_logic_test_cases!(f64, d);
+	make_nan_test_cases!(f32, f);
+	make_nan_test_cases!(f64, d);
 
 	#[test]
 	fn test_int_operations() {
@@ -372,6 +398,8 @@ mod tests {
 			(i32::MIN, 1, Opcode::ISub, i32::MAX),
 			(2, 2, Opcode::IMul, 4),
 			(4, 2, Opcode::IDiv, 2),
+			(4, 2, Opcode::IRem, 0),
+			(4, 3, Opcode::IRem, 1),
 			(1, 1, Opcode::IAnd, 1),
 			(1, 1, Opcode::IOr, 1),
 			(0, 0, Opcode::IOr, 0),
@@ -392,6 +420,8 @@ mod tests {
 			(i64::MIN, 1, Opcode::LSub, i64::MAX),
 			(2, 2, Opcode::LMul, 4),
 			(4, 2, Opcode::LDiv, 2),
+			(4, 2, Opcode::LRem, 0),
+			(4, 3, Opcode::LRem, 1),
 			(1, 1, Opcode::LAnd, 1),
 			(1, 1, Opcode::LOr, 1),
 			(0, 0, Opcode::LOr, 0),
@@ -400,6 +430,68 @@ mod tests {
 			(300, 0, Opcode::LNeg, -300),
 		];
 		run_l_test_cases(l_cases);
+	}
+
+	#[test]
+	fn test_float_operations() {
+		let f_cases: Vec<(f32, f32, Opcode, f32)> = vec![
+			(1.0, 1.0, Opcode::FAdd, 2.0),
+			(100.0, -0.5, Opcode::FAdd, 99.5),
+			(1.0, 1.0, Opcode::FSub, 0.0),
+			(0.0, -0.5, Opcode::FSub, 0.5),
+			(2.25, 2.0, Opcode::FMul, 4.50),
+			(4.0, 2.0, Opcode::FDiv, 2.0),
+			(5.0, 2.0, Opcode::FRem, 1.0),
+			(1.0, 1.0, Opcode::FRem, 0.0),
+			(300.0, 0.0, Opcode::FNeg, -300.0),
+		];
+		let f_nan_cases: Vec<(f32, f32, Opcode, f32)> = vec![
+			(1.0, f32::NAN, Opcode::FAdd, f32::NAN),
+			(f32::NAN, 1.0, Opcode::FAdd, f32::NAN),
+			(f32::NAN, f32::NAN, Opcode::FAdd, f32::NAN),
+			(1.0, f32::NAN, Opcode::FSub, f32::NAN),
+			(f32::NAN, 1.0, Opcode::FSub, f32::NAN),
+			(f32::NAN, f32::NAN, Opcode::FSub, f32::NAN),
+			(1.0, f32::NAN, Opcode::FMul, f32::NAN),
+			(f32::NAN, 1.0, Opcode::FMul, f32::NAN),
+			(f32::NAN, f32::NAN, Opcode::FMul, f32::NAN),
+			(1.0, f32::NAN, Opcode::FDiv, f32::NAN),
+			(f32::NAN, 1.0, Opcode::FDiv, f32::NAN),
+			(f32::NAN, f32::NAN, Opcode::FDiv, f32::NAN),
+		];
+		run_f_test_cases(f_cases);
+		run_f_nan_test_cases(f_nan_cases);
+	}
+
+	#[test]
+	fn test_double_operations() {
+		let d_cases: Vec<(f64, f64, Opcode, f64)> = vec![
+			(1.0, 1.0, Opcode::DAdd, 2.0),
+			(100.0, -0.5, Opcode::DAdd, 99.5),
+			(1.0, 1.0, Opcode::DSub, 0.0),
+			(0.0, -0.5, Opcode::DSub, 0.5),
+			(2.25, 2.0, Opcode::DMul, 4.50),
+			(4.0, 2.0, Opcode::DDiv, 2.0),
+			(5.0, 2.0, Opcode::DRem, 1.0),
+			(1.0, 1.0, Opcode::DRem, 0.0),
+			(300.0, 0.0, Opcode::DNeg, -300.0),
+		];
+		let d_nan_cases: Vec<(f64, f64, Opcode, f64)> = vec![
+			(1.0, f64::NAN, Opcode::DAdd, f64::NAN),
+			(f64::NAN, 1.0, Opcode::DAdd, f64::NAN),
+			(f64::NAN, f64::NAN, Opcode::DAdd, f64::NAN),
+			(1.0, f64::NAN, Opcode::DSub, f64::NAN),
+			(f64::NAN, 1.0, Opcode::DSub, f64::NAN),
+			(f64::NAN, f64::NAN, Opcode::DSub, f64::NAN),
+			(1.0, f64::NAN, Opcode::DMul, f64::NAN),
+			(f64::NAN, 1.0, Opcode::DMul, f64::NAN),
+			(f64::NAN, f64::NAN, Opcode::DMul, f64::NAN),
+			(1.0, f64::NAN, Opcode::DDiv, f64::NAN),
+			(f64::NAN, 1.0, Opcode::DDiv, f64::NAN),
+			(f64::NAN, f64::NAN, Opcode::DDiv, f64::NAN),
+		];
+		run_d_test_cases(d_cases);
+		run_d_nan_test_cases(d_nan_cases);
 	}
 
 	/// Test zero conditional branches.
@@ -528,6 +620,7 @@ mod tests {
 	/// The dcmpl and dcmpg opcodes should produce an identical top of stack except for 
 	/// when one or both compared values are NaN. In that case, dcmpg pushes 1 and dcmpl
 	/// pushes -1.
+	#[test]
 	fn test_double_comparisons() {
 		let cases: Vec<(Opcode, f64, f64, i32)> = vec![
 			(Opcode::DCmpG, 0.0, 0.0, 0),
