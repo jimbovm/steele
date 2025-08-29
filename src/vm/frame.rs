@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap};
+use std::{collections::{BTreeMap, HashMap}, ptr::null};
 
 use crate::{
 	class::constant_pool::ConstantPoolItem, vm::{local::Locals,
@@ -6,6 +6,8 @@ use crate::{
 
 #[derive(Debug, Default)]
 pub struct StackFrame {
+	/// The frame belonging to the method that invoked the frame to which this one belongs
+	pub invoker: Option<Box<StackFrame>>,
 	/// Program counter, pointer to position in bytecode
 	pub pc: u32,
 	/// Operand stack for this frame
@@ -22,6 +24,7 @@ impl StackFrame {
 
 	pub fn new() -> StackFrame {
 		let frame = StackFrame {
+			invoker: Option::None,
 			pc: 0,
 			operand_stack: OperandStack { max_depth: usize::MAX, stack: Vec::new() },
 			locals: Locals { variables: HashMap::new() },
