@@ -460,7 +460,7 @@ mod tests {
 			(Opcode::IfICmpGe, 0, 0, 16),
 			(Opcode::IfICmpGe, 1, 0, 16),
 			(Opcode::IfICmpGe, 0, 1, 4),
-			(Opcode::IfICmpLe, 0, 1, 16),
+			(Opcode::IfICmpLe, 0, 0, 16),
 			(Opcode::IfICmpLe, 1, 0, 4),
 			(Opcode::IfICmpLe, 0, 1, 16),
 		];
@@ -480,6 +480,85 @@ mod tests {
 			];
 			interpreter.execute();
 			assert_eq!(interpreter.frame.pc, expected_pc);
+		}
+	}
+
+	/// Test float comparisons.
+	/// 
+	/// The fcmpl and fcmpg opcodes should produce an identical top of stack except for 
+	/// when one or both compared values are NaN. In that case, fcmpg pushes 1 and fcmpl
+	/// pushes -1.
+	#[test]
+	fn test_float_comparisons() {
+		let cases: Vec<(Opcode, f32, f32, i32)> = vec![
+			(Opcode::FCmpG, 0.0, 0.0, 0),
+			(Opcode::FCmpG, 3.14, 3.14, 0),
+			(Opcode::FCmpG, 0.0, -3.14, 1),
+			(Opcode::FCmpG, -3.14, 0.0, -1),
+			(Opcode::FCmpG, 0.0, -0.0, 0),
+			(Opcode::FCmpG, 0.0, f32::NAN, 1),
+			(Opcode::FCmpG, f32::NAN, 0.0, 1),
+			(Opcode::FCmpG, f32::NAN, f32::NAN, 1),
+			(Opcode::FCmpL, 0.0, 0.0, 0),
+			(Opcode::FCmpL, 3.14, 3.14, 0),
+			(Opcode::FCmpL, 0.0, -3.14, 1),
+			(Opcode::FCmpL, -3.14, 0.0, -1),
+			(Opcode::FCmpL, 0.0, -0.0, 0),
+			(Opcode::FCmpL, 0.0, f32::NAN, -1),
+			(Opcode::FCmpL, f32::NAN, 0.0, -1),
+			(Opcode::FCmpL, f32::NAN, f32::NAN, -1),
+		];
+		for case in cases {
+			let opcode = case.0 as u8;
+			let value_1 = &case.1;
+			let value_2 = &case.2;
+			let expected = case.3;
+			let mut interpreter = Interpreter::new();
+			interpreter.fpush(*value_2);
+			interpreter.fpush(*value_1);
+			interpreter.frame.code = vec![opcode];
+			println!("opcode: {:?} value_1: {} value_2: {}", Opcode::try_from(opcode).unwrap(), value_1, value_2);
+			interpreter.execute();
+			assert_eq!(interpreter.ipop(), expected);
+		}
+	}
+
+	/// Test double comparisons.
+	/// 
+	/// The dcmpl and dcmpg opcodes should produce an identical top of stack except for 
+	/// when one or both compared values are NaN. In that case, dcmpg pushes 1 and dcmpl
+	/// pushes -1.
+	fn test_double_comparisons() {
+		let cases: Vec<(Opcode, f64, f64, i32)> = vec![
+			(Opcode::DCmpG, 0.0, 0.0, 0),
+			(Opcode::DCmpG, 3.14, 3.14, 0),
+			(Opcode::DCmpG, 0.0, -3.14, 1),
+			(Opcode::DCmpG, -3.14, 0.0, -1),
+			(Opcode::DCmpG, 0.0, -0.0, 0),
+			(Opcode::DCmpG, 0.0, f64::NAN, 1),
+			(Opcode::DCmpG, f64::NAN, 0.0, 1),
+			(Opcode::DCmpG, f64::NAN, f64::NAN, 1),
+			(Opcode::DCmpL, 0.0, 0.0, 0),
+			(Opcode::DCmpL, 3.14, 3.14, 0),
+			(Opcode::DCmpL, 0.0, -3.14, 1),
+			(Opcode::DCmpL, -3.14, 0.0, -1),
+			(Opcode::DCmpL, 0.0, -0.0, 0),
+			(Opcode::DCmpL, 0.0, f64::NAN, -1),
+			(Opcode::DCmpL, f64::NAN, 0.0, -1),
+			(Opcode::DCmpL, f64::NAN, f64::NAN, -1),
+		];
+		for case in cases {
+			let opcode = case.0 as u8;
+			let value_1 = &case.1;
+			let value_2 = &case.2;
+			let expected = case.3;
+			let mut interpreter = Interpreter::new();
+			interpreter.dpush(*value_2);
+			interpreter.dpush(*value_1);
+			println!("opcode: {:?} value_1: {} value_2: {}", Opcode::try_from(opcode).unwrap(), value_1, value_2);
+			interpreter.frame.code = vec![opcode];
+			interpreter.execute();
+			assert_eq!(interpreter.ipop(), expected);
 		}
 	}
 }
