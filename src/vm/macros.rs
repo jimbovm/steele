@@ -1,3 +1,4 @@
+/// Generate pop and load functions for a type.
 #[macro_export]
 macro_rules! make_pop_load {
 	($prefix:ident,
@@ -20,6 +21,7 @@ macro_rules! make_pop_load {
 	}
 }
 
+/// Generate push functions for a type. 
 #[macro_export]
 macro_rules! make_push {
 	($prefix:ident,
@@ -43,6 +45,7 @@ macro_rules! make_push_extend {
 	};
 }
 
+/// Generate integer arithmetic and logic functions, shared between ints and longs.
 #[macro_export]
 macro_rules! make_integer_arithmetic_logic {
 	($prefix:ident,
@@ -73,6 +76,11 @@ macro_rules! make_integer_arithmetic_logic {
 			self.${ concat($prefix, push) }(val as $rust_type);
 			val
 		}
+		pub fn ${ concat($prefix, rem) } (&mut self) -> $rust_type {
+			let val = (self.${ concat($prefix, pop) }() % self.${ concat($prefix, pop) }()) as $rust_type;
+			self.${ concat($prefix, push) }(val);
+			val
+		}
 		pub fn ${ concat($prefix, and) } (&mut self) -> $rust_type {
 			let val = self.${ concat($prefix, pop) }() & self.${ concat($prefix, pop) }();
 			self.${ concat($prefix, push) }(val as $rust_type);
@@ -101,6 +109,7 @@ macro_rules! make_integer_arithmetic_logic {
 	};
 }
 
+/// Generate floating point arithmetic functions, shared between floats and doubles.
 #[macro_export]
 macro_rules! make_float_arithmetic {
 	($prefix:ident,
@@ -126,6 +135,11 @@ macro_rules! make_float_arithmetic {
 			self.${ concat($prefix, push) }(val as $rust_type);
 			val
 		}
+		pub fn ${ concat($prefix, rem) } (&mut self) -> $rust_type {
+			let val = (self.${ concat($prefix, pop) }() % self.${ concat($prefix, pop) }()) as $rust_type;
+			self.${ concat($prefix, push) }(val);
+			val
+		}
 		pub fn ${ concat($prefix, neg) } (&mut self) -> $rust_type {
 			let val = -self.${ concat($prefix, pop) }();
 			self.${ concat($prefix, push) }(val as $rust_type);
@@ -134,6 +148,7 @@ macro_rules! make_float_arithmetic {
 	};
 }
 
+/// Generate conditional branches, which work similarly except for the actual comparison performed.
 #[macro_export]
 macro_rules! make_conditional_branches {
 	($condition_name:ident,
@@ -154,6 +169,8 @@ macro_rules! make_conditional_branches {
 	}
 }
 
+/// Generate floating-point comparisons, which share functionality between floats and doubles, and 
+/// work similarly except for the actual comparison performed.
 #[macro_export]
 macro_rules! make_float_comparisons {
 	($prefix:ident,
