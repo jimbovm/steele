@@ -337,7 +337,6 @@ mod tests {
 		isa::opcode::Opcode,
 		vm::interpreter::Interpreter};
 
-
 	macro_rules! integer_test_cases {
 		($rust_type:ty,
 		 $prefix:ident) => {
@@ -403,7 +402,7 @@ mod tests {
 		run_l_test_cases(l_cases);
 	}
 
-	/// Test conditional branches.
+	/// Test zero conditional branches.
 	///
 	/// If the check results in a branch, the PC will be set to 16 which will break the interpreter loop.
 	/// If the check does not result in a branch, execution will continue to byte 3 (nop) which will 
@@ -439,6 +438,48 @@ mod tests {
 			interpreter.execute();
 			assert_eq!(interpreter.frame.pc, expected_pc);
 		}
+	}
 
+	/// Test integer conditional branches.
+	///
+	/// If the check results in a branch, the PC will be set to 16 which will break the interpreter loop.
+	/// If the check does not result in a branch, execution will continue to byte 3 (nop) which will 
+	/// increment the PC to 4.
+	#[test]
+	fn test_integer_conditional_branches() {
+		let cases = vec![
+			(Opcode::IfICmpEq, 0, 0, 16),
+			(Opcode::IfICmpEq, 1, 0, 4),
+			(Opcode::IfICmpEq, 0, 1, 4),
+			(Opcode::IfICmpGt, 0, 0, 4),
+			(Opcode::IfICmpGt, 0, 1, 4),
+			(Opcode::IfICmpGt, 1, 0, 16),
+			(Opcode::IfICmpLt, 0, 0, 4),
+			(Opcode::IfICmpLt, 1, 0, 4),
+			(Opcode::IfICmpLt, 0, 1, 16),
+			(Opcode::IfICmpGe, 0, 0, 16),
+			(Opcode::IfICmpGe, 1, 0, 16),
+			(Opcode::IfICmpGe, 0, 1, 4),
+			(Opcode::IfICmpLe, 0, 1, 16),
+			(Opcode::IfICmpLe, 1, 0, 4),
+			(Opcode::IfICmpLe, 0, 1, 16),
+		];
+		for case in cases {
+			let opcode = case.0 as u8;
+			let value_1 = &case.1;
+			let value_2 = &case.2;
+			let expected_pc = case.3;
+			let mut interpreter = Interpreter::new();
+			interpreter.ipush(*value_2);
+			interpreter.ipush(*value_1);
+			interpreter.frame.code = vec![
+				opcode, // 0
+				0u8, // 1
+				16u8, // 2
+				Opcode::Nop as u8 // 3
+			];
+			interpreter.execute();
+			assert_eq!(interpreter.frame.pc, expected_pc);
+		}
 	}
 }
