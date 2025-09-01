@@ -6,7 +6,7 @@ use crate::{
 	make_float_arithmetic,
 	make_float_comparisons,
 	make_integer_arithmetic_logic,
-	make_pop_load,
+	make_pop_load_store,
 	make_push, vm::{
 		frame::StackFrame,
 		types::*}};
@@ -31,13 +31,13 @@ impl Interpreter {
 		Opcode::try_from(byte).expect("Invalid opcode")
 	}
 
-	make_pop_load!(i, i32, Int, get_int, 4);
+	make_pop_load_store!(i, i32, Int, Int, Int, get_int, 4);
 	make_push!(i, i32);
-	make_pop_load!(l, i64, Long, get_long, 8);
+	make_pop_load_store!(l, i64, Long, Long, Long, get_long, 8);
 	make_push!(l, i64);
-	make_pop_load!(f, f32, Float, get_float, 4);
+	make_pop_load_store!(f, f32, Float, Float, Float, get_float, 4);
 	make_push!(f, f32);
-	make_pop_load!(d, f64, Double, get_double, 8);
+	make_pop_load_store!(d, f64, Double, Double, Double, get_double, 8);
 	make_push!(d, f64);
 	make_integer_arithmetic_logic!(i, i32);
 	make_integer_arithmetic_logic!(l, i64);
@@ -133,22 +133,70 @@ impl Interpreter {
 				Opcode::FStore => todo!(),
 				Opcode::DStore => todo!(),
 				Opcode::AStore => todo!(),
-				Opcode::IStore0 => todo!(),
-				Opcode::IStore1 => todo!(),
-				Opcode::IStore2 => todo!(),
-				Opcode::IStore3 => todo!(),
-				Opcode::LStore0 => todo!(),
-				Opcode::LStore1 => todo!(),
-				Opcode::LStore2 => todo!(),
-				Opcode::LStore3 => todo!(),
-				Opcode::FStore0 => todo!(),
-				Opcode::FStore1 => todo!(),
-				Opcode::FStore2 => todo!(),
-				Opcode::FStore3 => todo!(),
-				Opcode::DStore0 => todo!(),
-				Opcode::DStore1 => todo!(),
-				Opcode::DStore2 => todo!(),
-				Opcode::DStore3 => todo!(),
+				Opcode::IStore0 => {
+					let val = self.ipop();
+					self.istore(0, val);
+				}
+				Opcode::IStore1 => {
+					let val = self.ipop();
+					self.istore(1, val);
+				}
+				Opcode::IStore2 => {
+					let val = self.ipop();
+					self.istore(2, val);
+				}
+				Opcode::IStore3 => {
+					let val = self.ipop();
+					self.istore(3, val);
+				}
+				Opcode::LStore0 => {
+					let val = self.lpop();
+					self.lstore(0, val);
+				}
+				Opcode::LStore1 => {
+					let val = self.lpop();
+					self.lstore(1, val);
+				}
+				Opcode::LStore2 => {
+					let val = self.lpop();
+					self.lstore(2, val);
+				}
+				Opcode::LStore3 => {
+					let val = self.lpop();
+					self.lstore(3, val);
+				}
+				Opcode::FStore0 => {
+					let val = self.fpop();
+					self.fstore(0, val);
+				}
+				Opcode::FStore1 => {
+					let val = self.fpop();
+					self.fstore(1, val);
+				}
+				Opcode::FStore2 => {
+					let val = self.fpop();
+					self.fstore(2, val);
+				}
+				Opcode::FStore3 => {
+					let val = self.fpop();
+					self.fstore(3, val);
+				}
+				Opcode::DStore0 => {
+					let val = self.dpop();
+					self.dstore(3, val);
+				}
+				Opcode::DStore1 => {
+					let val = self.dpop();
+					self.dstore(3, val);
+				}
+				Opcode::DStore2 => {
+					let val = self.dpop();
+					self.dstore(3, val);
+				}
+				Opcode::DStore3 => {
+					let val = self.dpop();
+					self.dstore(3, val);
+				}
 				Opcode::AStore0 => todo!(),
 				Opcode::AStore1 => todo!(),
 				Opcode::AStore2 => todo!(),

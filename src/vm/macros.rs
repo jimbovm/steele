@@ -1,9 +1,11 @@
 /// Generate pop and load functions for a type.
 #[macro_export]
-macro_rules! make_pop_load {
+macro_rules! make_pop_load_store {
 	($prefix:ident,
 	 $rust_type:ty,
 	 $variable_type:ty,
+	 $enum_variant:ident,
+	 $inner_type:tt,
 	 $getter:ident,
 	 $byte_len:literal
 	) => {
@@ -11,6 +13,10 @@ macro_rules! make_pop_load {
 			let local = self.frame.locals.$getter(index)?;
 			self.frame.operand_stack.push(&local.value.to_be_bytes());
 			Ok(local)
+		}
+
+		pub fn ${ concat($prefix, store) } (&mut self, index: u32, value: $rust_type) {
+			self.frame.locals.variables.insert(index, Variable::$enum_variant({$inner_type { value: value } }));
 		}
 
 		pub fn $ { concat($prefix, pop) } (&mut self) -> $rust_type {
