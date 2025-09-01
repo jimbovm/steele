@@ -27,56 +27,56 @@ pub enum VerificationTypeInfo {
 /// See JVMS17 4.74 p. 119.
 #[binrw]
 #[derive(Clone, Debug, PartialEq)]
-struct TopVariableInfo {
+pub struct TopVariableInfo {
 	tag: u8,
 }
 
 /// See JVMS17 4.74 p. 120.
 #[binrw]
 #[derive(Clone, Debug, PartialEq)]
-struct IntegerVariableInfo {
+pub struct IntegerVariableInfo {
 	tag: u8,
 }
 
 /// See JVMS17 4.74 p. 120.
 #[binrw]
 #[derive(Clone, Debug, PartialEq)]
-struct FloatVariableInfo {
+pub struct FloatVariableInfo {
 	tag: u8,
 }
 
 /// See JVMS17 4.74 p. 121.
 #[binrw]
 #[derive(Clone, Debug, PartialEq)]
-struct DoubleVariableInfo {
+pub struct DoubleVariableInfo {
 	tag: u8,
 }
 
 /// See JVMS17 4.74 p. 121.
 #[binrw]
 #[derive(Clone, Debug, PartialEq)]
-struct LongVariableInfo {
+pub struct LongVariableInfo {
 	tag: u8,
 }
 
 /// See JVMS17 4.74 p. 120.
 #[binrw]
 #[derive(Clone, Debug, PartialEq)]
-struct NullVariableInfo {
+pub struct NullVariableInfo {
 	tag: u8,
 }
 
 /// See JVMS17 4.74 p. 120.
 #[binrw]
 #[derive(Clone, Debug, PartialEq)]
-struct UninitializedThisVariableInfo {
+pub struct UninitializedThisVariableInfo {
 	tag: u8,
 }
 
 /// See JVMS17 4.74 p. 120.
 #[binrw]
 #[derive(Clone, Debug, PartialEq)]
-struct ObjectVariableInfo {
+pub struct ObjectVariableInfo {
 	tag: u8,
 	constant_pool_index: u16,
 }
@@ -84,7 +84,7 @@ struct ObjectVariableInfo {
 /// See JVMS17 4.74 p. 120.
 #[binrw]
 #[derive(Clone, Debug, PartialEq)]
-struct UninitializedVariableInfo {
+pub struct UninitializedVariableInfo {
 	tag: u8,
 	offset: u16,
 }
