@@ -458,6 +458,7 @@ mod tests {
 				if vec![Opcode::INeg, Opcode::LNeg, Opcode::FNeg, Opcode::DNeg].contains(&opcode) == false {
 					interpreter.${ concat($prefix, push) }(value2);
 				}
+				println!("opcode: {:?} value_1: {} value_2: {}", opcode, value1, value2);
 				interpreter.${ concat($prefix, push) }(value1);
 				interpreter.frame.code.push(opcode as u8);
 				interpreter.execute();
@@ -470,16 +471,16 @@ mod tests {
 	macro_rules! make_nan_test_cases {
 		($rust_type:ty,
 		 $prefix:ident) => {
-		fn ${ concat(run_, $prefix, _, nan_test_cases)}(cases: Vec<($rust_type, $rust_type, Opcode, $rust_type)>) {
+		fn ${ concat(run_, $prefix, _, nan_test_cases)}(cases: Vec<($rust_type, $rust_type, Opcode)>) {
 			for case in cases {
 				let mut interpreter = Interpreter::new();
 				let value1 = case.0;
 				let value2 = case.1;
 				let opcode = case.2;
-				let expected = case.3;
 				if vec![Opcode::FNeg, Opcode::DNeg].contains(&opcode) == false {
 					interpreter.${ concat($prefix, push) }(value2);
 				}
+				println!("opcode: {:?} value_1: {} value_2: {}", opcode, value1, value2);
 				interpreter.${ concat($prefix, push) }(value1);
 				interpreter.frame.code.push(opcode as u8);
 				interpreter.execute();
@@ -553,19 +554,19 @@ mod tests {
 			(1.0, 1.0, Opcode::FRem, 0.0),
 			(300.0, 0.0, Opcode::FNeg, -300.0),
 		];
-		let f_nan_cases: Vec<(f32, f32, Opcode, f32)> = vec![
-			(1.0, f32::NAN, Opcode::FAdd, f32::NAN),
-			(f32::NAN, 1.0, Opcode::FAdd, f32::NAN),
-			(f32::NAN, f32::NAN, Opcode::FAdd, f32::NAN),
-			(1.0, f32::NAN, Opcode::FSub, f32::NAN),
-			(f32::NAN, 1.0, Opcode::FSub, f32::NAN),
-			(f32::NAN, f32::NAN, Opcode::FSub, f32::NAN),
-			(1.0, f32::NAN, Opcode::FMul, f32::NAN),
-			(f32::NAN, 1.0, Opcode::FMul, f32::NAN),
-			(f32::NAN, f32::NAN, Opcode::FMul, f32::NAN),
-			(1.0, f32::NAN, Opcode::FDiv, f32::NAN),
-			(f32::NAN, 1.0, Opcode::FDiv, f32::NAN),
-			(f32::NAN, f32::NAN, Opcode::FDiv, f32::NAN),
+		let f_nan_cases: Vec<(f32, f32, Opcode)> = vec![
+			(1.0, f32::NAN, Opcode::FAdd),
+			(f32::NAN, 1.0, Opcode::FAdd),
+			(f32::NAN, f32::NAN, Opcode::FAdd),
+			(1.0, f32::NAN, Opcode::FSub),
+			(f32::NAN, 1.0, Opcode::FSub),
+			(f32::NAN, f32::NAN, Opcode::FSub),
+			(1.0, f32::NAN, Opcode::FMul),
+			(f32::NAN, 1.0, Opcode::FMul),
+			(f32::NAN, f32::NAN, Opcode::FMul),
+			(1.0, f32::NAN, Opcode::FDiv),
+			(f32::NAN, 1.0, Opcode::FDiv),
+			(f32::NAN, f32::NAN, Opcode::FDiv),
 		];
 		run_f_test_cases(f_cases);
 		run_f_nan_test_cases(f_nan_cases);
@@ -584,19 +585,19 @@ mod tests {
 			(1.0, 1.0, Opcode::DRem, 0.0),
 			(300.0, 0.0, Opcode::DNeg, -300.0),
 		];
-		let d_nan_cases: Vec<(f64, f64, Opcode, f64)> = vec![
-			(1.0, f64::NAN, Opcode::DAdd, f64::NAN),
-			(f64::NAN, 1.0, Opcode::DAdd, f64::NAN),
-			(f64::NAN, f64::NAN, Opcode::DAdd, f64::NAN),
-			(1.0, f64::NAN, Opcode::DSub, f64::NAN),
-			(f64::NAN, 1.0, Opcode::DSub, f64::NAN),
-			(f64::NAN, f64::NAN, Opcode::DSub, f64::NAN),
-			(1.0, f64::NAN, Opcode::DMul, f64::NAN),
-			(f64::NAN, 1.0, Opcode::DMul, f64::NAN),
-			(f64::NAN, f64::NAN, Opcode::DMul, f64::NAN),
-			(1.0, f64::NAN, Opcode::DDiv, f64::NAN),
-			(f64::NAN, 1.0, Opcode::DDiv, f64::NAN),
-			(f64::NAN, f64::NAN, Opcode::DDiv, f64::NAN),
+		let d_nan_cases: Vec<(f64, f64, Opcode)> = vec![
+			(1.0, f64::NAN, Opcode::DAdd),
+			(f64::NAN, 1.0, Opcode::DAdd),
+			(f64::NAN, f64::NAN, Opcode::DAdd),
+			(1.0, f64::NAN, Opcode::DSub),
+			(f64::NAN, 1.0, Opcode::DSub),
+			(f64::NAN, f64::NAN, Opcode::DSub),
+			(1.0, f64::NAN, Opcode::DMul),
+			(f64::NAN, 1.0, Opcode::DMul),
+			(f64::NAN, f64::NAN, Opcode::DMul),
+			(1.0, f64::NAN, Opcode::DDiv),
+			(f64::NAN, 1.0, Opcode::DDiv),
+			(f64::NAN, f64::NAN, Opcode::DDiv),
 		];
 		run_d_test_cases(d_cases);
 		run_d_nan_test_cases(d_nan_cases);
