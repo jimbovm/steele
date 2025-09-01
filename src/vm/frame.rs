@@ -1,4 +1,4 @@
-use std::{collections::{BTreeMap, HashMap}, ptr::null};
+use std::collections::{BTreeMap, HashMap};
 
 use crate::{
 	class::constant_pool::ConstantPoolItem, vm::{local::Locals,
