@@ -17,13 +17,4 @@ impl OperandStack {
 		if self.stack.len() == 0 { panic!("Stack underflow"); }
 		self.stack.pop().unwrap()
 	}
-
-	fn pop_wide_operand(&mut self) -> i64 {
-		if self.stack.len() == 0 {	panic!("Stack underflow"); }
-		let high = self.stack.pop().unwrap();
-		if self.stack.len() == 0 {	panic!("Stack underflow"); }
-		let low = self.stack.pop().unwrap();
-		let operand: i64 = ((high as i64) << 32) & (low as i64);
-		operand
-	}
 }
