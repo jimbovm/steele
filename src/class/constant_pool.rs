@@ -85,8 +85,12 @@ macro_rules! make_accessor {
 
 impl ConstantPool {
 
+	pub fn new() -> ConstantPool {
+		ConstantPool { length: 0, constants: BTreeMap::new() }
+	}
+
 	make_accessor!(get_utf8, Utf8, "Utf8");
-	make_accessor!(get_integer, Integer, "Integer");
+	make_accessor!(get_int, Integer, "Integer");
 	make_accessor!(get_float, Float, "Float");
 	make_accessor!(get_long, Long, "Long");
 	make_accessor!(get_double, Double, "Double");
@@ -180,7 +184,7 @@ impl fmt::Display for Utf8 {
 #[brw(big)]
 #[derive(PartialEq, Debug, Clone, Copy)]
 pub struct Integer {
-	pub value: u32,
+	pub value: i32,
 }
 
 /// An implementation of CONSTANT_Float (JVMS 4.4-B)
@@ -188,7 +192,7 @@ pub struct Integer {
 #[brw(big)]
 #[derive(PartialEq, Debug, Clone, Copy)]
 pub struct Float {
-	pub value: u32,
+	pub value: f32,
 }
 
 /// An implementation of CONSTANT_Long (JVMS 4.4-B)
@@ -196,7 +200,7 @@ pub struct Float {
 #[brw(big)]
 #[derive(PartialEq, Debug, Clone, Copy)]
 pub struct Long {
-	pub value: u64,
+	pub value: i64,
 }
 
 /// An implementation of CONSTANT_Double (JVMS 4.4-B)
@@ -204,7 +208,7 @@ pub struct Long {
 #[brw(big)]
 #[derive(PartialEq, Debug, Clone, Copy)]
 pub struct Double {
-	pub value: u64,
+	pub value: f64,
 }
 
 /// An implementation of CONSTANT_Class (JVMS 4.4-B)
