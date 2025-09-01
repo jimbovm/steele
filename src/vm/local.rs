@@ -11,28 +11,28 @@ use crate::{
 /// An encapsulation of a local variable array for a stack frame.
 #[derive(Debug, Default)]
 pub struct Locals {
-	pub variables: HashMap<u16, Variable>
+	pub variables: HashMap<u32, Variable>
 }
 
 impl Locals {
 
 	/// Create a new local variable map, observing the rules for doubles and longs.
 	pub fn new(raw_variables: Vec<Variable>) -> Result<Locals, VariableError> {
-		let mut variables: HashMap<u16, Variable> = HashMap::new();
+		let mut variables: HashMap<u32, Variable> = HashMap::new();
 		let mut modifier = 0;
-		for i in 0..raw_variables.len() as u16 {
-			let var = raw_variables.get(i as usize);
+		for i in 0..raw_variables.len() {
+			let var = raw_variables.get(i);
 			match var {
 				Some(Variable::Double(d)) => {
 					modifier += 1;
-					variables.insert(i + modifier, Variable::Double(Double { value: d.value }));
+					variables.insert((i + modifier) as u32, Variable::Double(Double { value: d.value }));
 				},
 				Some(Variable::Long(l)) => {
 					modifier += 1;
-					variables.insert(i + modifier, Variable::Long(Long { value: l.value }));
+					variables.insert((i + modifier) as u32, Variable::Long(Long { value: l.value }));
 				},
 				Some(other_variable) => {
-					variables.insert(i + modifier, other_variable.clone());
+					variables.insert((i + modifier) as u32, other_variable.clone());
 				},
 				None => {
 					return Err(VariableError { msg: "unknown error creating locals object".to_string() });
@@ -62,7 +62,7 @@ macro_rules! make_local_accessor {
 	 $variable_type: ident,
 	 $wanted_type: literal
 	) => {
-		pub fn $fn_name(&self, index: u16) -> Result<$variable_type, Box<dyn Error>> {
+		pub fn $fn_name(&self, index: u32) -> Result<$variable_type, Box<dyn Error>> {
 			let variable = self.variables.get(&index);
 			match variable {
 				Some(variable) => {

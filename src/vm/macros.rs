@@ -7,7 +7,7 @@ macro_rules! make_pop_load {
 	 $getter:ident,
 	 $byte_len:literal
 	) => {
-		pub fn ${ concat($prefix, load) } (&mut self, index: u16) -> Result<$variable_type, Box<dyn Error>> {
+		pub fn ${ concat($prefix, load) } (&mut self, index: u32) -> Result<$variable_type, Box<dyn Error>> {
 			let local = self.frame.locals.$getter(index)?;
 			self.frame.operand_stack.push(&local.value.to_be_bytes());
 			Ok(local)

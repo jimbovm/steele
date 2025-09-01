@@ -43,10 +43,8 @@ impl Interpreter {
 	make_integer_arithmetic_logic!(l, i64);
 	make_float_arithmetic!(f, f32);
 	make_float_arithmetic!(d, f64);
-
 	make_float_comparisons!(f, f32);
 	make_float_comparisons!(d, f64);
-
 	make_conditional_branches!(eq, ==);
 	make_conditional_branches!(ne, !=);
 	make_conditional_branches!(lt, <);
@@ -87,7 +85,7 @@ impl Interpreter {
 				Opcode::Ldc2W => todo!(),
 				Opcode::ALoad => todo!(),
 				Opcode::ILoad => {
-					let index: u16 = u16::from_be_bytes([self.frame.operand_stack.pop(), self.frame.operand_stack.pop()]);
+					let index: u32 = u32::from_be_bytes([0, 0, self.frame.operand_stack.pop(), self.frame.operand_stack.pop()]);
 					self.iload(index)?;
 				}
 				Opcode::ILoad0 => { self.iload(0)?; }
@@ -95,7 +93,7 @@ impl Interpreter {
 				Opcode::ILoad2 => {	self.iload(2)?; }
 				Opcode::ILoad3 => {	self.iload(3)?; }
 				Opcode::LLoad => {
-					let index: u16 = u16::from_be_bytes([self.frame.operand_stack.pop(), self.frame.operand_stack.pop()]);
+					let index: u32 = u32::from_be_bytes([0, 0, self.frame.operand_stack.pop(), self.frame.operand_stack.pop()]);
 					self.lload(index)?;
 				},
 				Opcode::LLoad0 => {	self.lload(0)?; },
@@ -103,7 +101,7 @@ impl Interpreter {
 				Opcode::LLoad2 => {	self.lload(2)?; },
 				Opcode::LLoad3 => { self.lload(3)?; },
 				Opcode::FLoad => {
-					let index: u16 = u16::from_be_bytes([self.frame.operand_stack.pop(), self.frame.operand_stack.pop()]);
+					let index: u32 = u32::from_be_bytes([0, 0, self.frame.operand_stack.pop(), self.frame.operand_stack.pop()]);
 					self.fload(index)?;
 				},
 				Opcode::FLoad0 => {	self.dload(0)?; },
@@ -111,7 +109,7 @@ impl Interpreter {
 				Opcode::FLoad2 => {	self.dload(2)?; },
 				Opcode::FLoad3 => {	self.dload(3)?; },
 				Opcode::DLoad => {
-					let index: u16 = u16::from_be_bytes([self.frame.operand_stack.pop(), self.frame.operand_stack.pop()]);
+					let index: u32 = u32::from_be_bytes([0, 0, self.frame.operand_stack.pop(), self.frame.operand_stack.pop()]);
 					self.dload(index)?;
 				},
 				Opcode::DLoad0 => { self.dload(0)?; },
@@ -175,7 +173,13 @@ impl Interpreter {
 					self.ipush(val);
 					self.ipush(val);
 				}
-				Opcode::DupX1 => todo!(),
+				Opcode::DupX1 => {
+					let value_1 = self.ipop();
+					let value_2 = self.ipop();
+					self.ipush(value_1);
+					self.ipush(value_2);
+					self.ipush(value_1);
+				},
 				Opcode::DupX2 => todo!(),
 				Opcode::Dup2 => todo!(),
 				Opcode::Dup2X1 => todo!(),
@@ -243,21 +247,72 @@ impl Interpreter {
 				Opcode::IXor => { self.ixor(); }
 				Opcode::LXor => { self.lxor(); }
 				Opcode::IInc => todo!(),
-				Opcode::I2L => todo!(),
-				Opcode::I2F => todo!(),
-				Opcode::I2D => todo!(),
-				Opcode::L2I => todo!(),
-				Opcode::L2F => todo!(),
-				Opcode::L2D => todo!(),
-				Opcode::F2I => todo!(),
-				Opcode::F2L => todo!(),
-				Opcode::F2D => todo!(),
-				Opcode::D2I => todo!(),
-				Opcode::D2L => todo!(),
-				Opcode::D2F => todo!(),
-				Opcode::I2B => {todo!()},
-				Opcode::I2C => todo!(),
-				Opcode::I2S => todo!(),
+				Opcode::I2L => {
+					let int = self.ipop();
+					self.lpush(int as i64);
+				}
+				Opcode::I2F => {
+					let int = self.ipop();
+					self.fpush(int as f32);
+				}
+				Opcode::I2D => {
+					let int = self.ipop();
+					self.dpush(int as f64);
+				}
+				Opcode::L2I => {
+					let long = self.lpop().to_be_bytes();
+					self.ipush(i32::from_be_bytes([0, 0, long[2], long[3]]));
+				}
+				Opcode::L2F => {
+					let long = self.lpop().to_be_bytes();
+					self.fpush(i32::from_be_bytes([0, 0, long[2], long[3]]) as f32);
+				}
+				Opcode::L2D => {
+					let long = self.lpop();
+					self.dpush(long as f64);
+				}
+				Opcode::F2I => {
+					let float = self.fpop();
+					self.ipush(float.round() as i32);
+				}
+				Opcode::F2L => {
+					let float = self.fpop();
+					self.lpush(float.round() as i64);
+				}
+				Opcode::F2D => {
+					let float = self.fpop();
+					self.dpush(float as f64);
+				}
+				Opcode::D2I => {
+					let double = self.dpop();
+					let rounded = double.round();
+					let long = rounded as i64;
+					let bytes = long.to_be_bytes();
+					self.ipush(i32::from_be_bytes([0, 0, bytes[2], bytes[3]]));
+				}
+				Opcode::D2L => {
+					let double = self.dpop();
+					let rounded = double.round();
+					self.lpush(rounded as i64);
+				}
+				Opcode::D2F => {
+					let double = self.dpop();
+					self.fpush(double as f32);
+				}
+				Opcode::I2B => {
+					let byte = self.ipop() & 0xFF;
+					self.ipush(byte);
+				}
+				Opcode::I2C => {
+					let bytes = self.ipop().to_be_bytes();
+					let char = i32::from_be_bytes([0, 0, bytes[2], bytes[3]]);
+					self.ipush(char);
+				}
+				Opcode::I2S => {
+					let bytes = self.ipop().to_be_bytes();
+					let short = i32::from_be_bytes([0, 0, bytes[2], bytes[3]]);
+					self.ipush(short);
+				}
 				Opcode::LCmp => {
 					let value_1 = self.lpop();
 					let value_2 = self.lpop();
@@ -283,7 +338,10 @@ impl Interpreter {
 				Opcode::IfICmpLe => { self.if_icmple(); }
 				Opcode::IfACmpEq => todo!(),
 				Opcode::IfACmpNe => todo!(),
-				Opcode::Goto => todo!(),
+				Opcode::Goto => {
+					let offset: u16 = u16::from_be_bytes([self.frame.code[self.frame.pc as usize], self.frame.code[(self.frame.pc + 1) as usize]]);
+					self.frame.pc += offset as u32;
+				}
 				Opcode::Jsr => todo!(),
 				Opcode::Ret => todo!(),
 				Opcode::TableSwitch => todo!(),
@@ -318,7 +376,9 @@ impl Interpreter {
 				Opcode::IfNonNull => todo!(),
 				Opcode::GotoW => todo!(),
 				Opcode::JsrW => todo!(),
-				Opcode::Breakpoint => todo!(),
+				Opcode::Breakpoint => {
+					// do nothing
+				},
 				Opcode::Impdep1 => {
 					// do nothing
 				},
