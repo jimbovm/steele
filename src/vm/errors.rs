@@ -1,7 +1,10 @@
 use thiserror::Error;
 
 #[derive(Error, Debug)]
-pub enum InterpreterError {
+pub enum ExecutionError {
+	#[error("illegal opcode: {0}")]
+	#[from(TryFromPrimitiveError)]
+	DecodeError(u8),
 	#[error("stack overflow")]
 	StackOverflow,
 	#[error("stack underflow")]
