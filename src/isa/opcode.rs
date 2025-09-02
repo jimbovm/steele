@@ -37,7 +37,7 @@ pub enum Opcode {
 	LConst1 = 0x0A,
 	FConst0 = 0x0B,
 	FConst1 = 0x0C,
-	FConst3 = 0x0D,
+	FConst2 = 0x0D,
 	DConst0 = 0x0E,
 	DConst1 = 0x0F,
 	BIpush = 0x10,
