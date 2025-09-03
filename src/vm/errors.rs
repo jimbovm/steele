@@ -1,5 +1,7 @@
 use thiserror::Error;
 
+use crate::vm::types::Type;
+
 #[derive(Error, Debug)]
 pub enum ExecutionError {
 	#[error("illegal opcode: {0}")]
@@ -13,4 +15,6 @@ pub enum ExecutionError {
 	EndOfCode(u32),
 	#[error("jump out of bounds to {0}, code max byte address is {1}")]
 	JumpOutOfBounds(u32, usize),
+	#[error("Attempt to return {0} from method type {1}")]
+	BadReturnType(Type, Type),
 }

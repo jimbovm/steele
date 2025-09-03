@@ -1,30 +1,42 @@
 use std::error::Error;
 
+use crate::make_return;
+use crate::vm::{
+	errors::ExecutionError,
+	types::Int,
+};
+
 use crate::{
-	isa::opcode::Opcode, 
+	isa::opcode::Opcode,
 	make_conditional_branches,
 	make_float_arithmetic,
 	make_float_comparisons,
 	make_integer_arithmetic_logic,
 	make_pop_load_store,
-	make_push, vm::{
+	make_push,
+	vm::{
 		frame::StackFrame,
 		types::*}};
 
 #[derive(Debug, Default)]
 pub struct Interpreter {
-	pub frame: StackFrame,
+	frame: StackFrame,
 }
 
 impl Interpreter {
-	pub fn new() -> Interpreter {
-		Interpreter { frame: StackFrame::new() }
+	pub fn new(frame: StackFrame) -> Interpreter {
+		Interpreter {
+			frame,
+		}
 	}
 
-	pub fn fetch(&mut self) -> u8 {
-		let byte = self.frame.code[self.frame.pc as usize];
-		self.frame.pc += 1;
-		byte
+	pub fn fetch(&mut self) -> Result<u8, Box<dyn Error>> {
+		if self.frame.pc < self.frame.code.len() as u32 {
+			let byte = self.frame.code[self.frame.pc as usize];
+			self.frame.pc += 1;
+			return Ok(byte);
+		}
+		return Err(Box::new(ExecutionError::EndOfCode(self.frame.pc)));
 	}
 
 	fn decode(&mut self, byte: u8) -> Opcode {
@@ -51,13 +63,14 @@ impl Interpreter {
 	make_conditional_branches!(ge, >=);
 	make_conditional_branches!(gt, >);
 	make_conditional_branches!(le, <=);
+	make_return!(i, i32, Int, I);
+	make_return!(l, i64, Long, J);
+	make_return!(f, f32, Float, F);
+	make_return!(d, f64, Double, D);
 
-	pub fn execute(&mut self) -> Result<usize, Box<dyn Error>> {
+	pub fn execute(&mut self) -> Result<Variable, Box<dyn Error>> {
 		loop {
-			if self.frame.pc >= self.frame.code.len() as u32 {
-				break Ok(0);
-			}
-			let byte = self.fetch();
+			let byte = self.fetch()?;
 			let opcode = self.decode(byte);
 			match opcode {
 				Opcode::Nop => {
@@ -65,21 +78,69 @@ impl Interpreter {
 				},
 				Opcode::AConstNull => todo!(),
 				Opcode::IConstM1 => todo!(),
-				Opcode::IConst0 => todo!(),
-				Opcode::IConst1 => todo!(),
-				Opcode::IConst2 => todo!(),
-				Opcode::IConst3 => todo!(),
-				Opcode::IConst4 => todo!(),
-				Opcode::IConst5 => todo!(),
-				Opcode::LConst0 => todo!(),
-				Opcode::LConst1 => todo!(),
-				Opcode::FConst0 => todo!(),
-				Opcode::FConst1 => todo!(),
-				Opcode::FConst3 => todo!(),
-				Opcode::DConst0 => todo!(),
-				Opcode::DConst1 => todo!(),
-				Opcode::BIpush => todo!(),
-				Opcode::SIpush => todo!(),
+				Opcode::IConst0 => {
+					let item = self.frame.constant_pool.get_int(0)?;
+					self.ipush(item.value);
+				}
+				Opcode::IConst1 => {
+					let item = self.frame.constant_pool.get_int(1)?;
+					self.ipush(item.value);
+				}
+				Opcode::IConst2 => {
+					let item = self.frame.constant_pool.get_int(2)?;
+					self.ipush(item.value);
+				}
+				Opcode::IConst3 => {
+					let item = self.frame.constant_pool.get_int(3)?;
+					self.ipush(item.value);
+				}
+				Opcode::IConst4 => {
+					let item = self.frame.constant_pool.get_int(4)?;
+					self.ipush(item.value);
+				}
+				Opcode::IConst5 => {
+					let item = self.frame.constant_pool.get_int(5)?;
+					self.ipush(item.value);
+				}
+				Opcode::LConst0 => {
+					let item = self.frame.constant_pool.get_long(0)?;
+					self.lpush(item.value);
+				}
+				Opcode::LConst1 => {
+					let item = self.frame.constant_pool.get_long(1)?;
+					self.lpush(item.value);
+				}
+				Opcode::FConst0 => {
+					let item = self.frame.constant_pool.get_float(0)?;
+					self.fpush(item.value);
+				}
+				Opcode::FConst1 => {
+					let item = self.frame.constant_pool.get_float(1)?;
+					self.fpush(item.value);
+				}
+				Opcode::FConst2 => {
+					let item = self.frame.constant_pool.get_float(2)?;
+					self.fpush(item.value);
+				}
+				Opcode::DConst0 => {
+					let item = self.frame.constant_pool.get_double(0)?;
+					self.dpush(item.value);
+				}
+				Opcode::DConst1 => {
+					let item = self.frame.constant_pool.get_double(1)?;
+					self.dpush(item.value);
+				}
+				Opcode::BIpush => {
+					let byte = i32::from(self.frame.code[self.frame.pc as usize]);
+					self.frame.pc += 1;
+					self.ipush(byte);
+				}
+				Opcode::SIpush => {
+					let short_high = self.frame.code[self.frame.pc as usize];
+					let short_low = self.frame.code[self.frame.pc as usize];
+					let short = i32::from(i16::from_be_bytes([short_high, short_low]));
+					self.ipush(short);
+				}
 				Opcode::Ldc => todo!(),
 				Opcode::LdcW => todo!(),
 				Opcode::Ldc2W => todo!(),
@@ -183,15 +244,15 @@ impl Interpreter {
 				}
 				Opcode::DStore0 => {
 					let val = self.dpop();
-					self.dstore(3, val);
+					self.dstore(0, val);
 				}
 				Opcode::DStore1 => {
 					let val = self.dpop();
-					self.dstore(3, val);
+					self.dstore(1, val);
 				}
 				Opcode::DStore2 => {
 					let val = self.dpop();
-					self.dstore(3, val);
+					self.dstore(2, val);
 				}
 				Opcode::DStore3 => {
 					let val = self.dpop();
@@ -232,7 +293,7 @@ impl Interpreter {
 				Opcode::Dup2 => todo!(),
 				Opcode::Dup2X1 => todo!(),
 				Opcode::Dup2X2 => todo!(),
-				Opcode::Swap =>{
+				Opcode::Swap => {
 					let value_2 = self.ipop();
 					let value_1 = self.ipop();
 					self.ipush(value_2);
@@ -387,17 +448,17 @@ impl Interpreter {
 				Opcode::IfACmpEq => todo!(),
 				Opcode::IfACmpNe => todo!(),
 				Opcode::Goto => {
-					let offset: u16 = u16::from_be_bytes([self.frame.code[self.frame.pc as usize], self.frame.code[(self.frame.pc + 1) as usize]]);
-					self.frame.pc += offset as u32;
+					let offset = u32::from(u16::from_be_bytes([self.frame.code[self.frame.pc as usize], self.frame.code[(self.frame.pc + 1) as usize]]));
+					self.frame.pc += offset;
 				}
 				Opcode::Jsr => todo!(),
 				Opcode::Ret => todo!(),
 				Opcode::TableSwitch => todo!(),
 				Opcode::LookupSwitch => todo!(),
-				Opcode::IReturn => todo!(),
-				Opcode::LReturn => todo!(),
-				Opcode::FReturn => todo!(),
-				Opcode::DReturn => todo!(),
+				Opcode::IReturn => { return self.ireturn(); } 
+				Opcode::LReturn =>  { return self.lreturn(); } 
+				Opcode::FReturn => { return self.freturn(); }
+				Opcode::DReturn => { return self.lreturn(); }
 				Opcode::AReturn => todo!(),
 				Opcode::Return => todo!(),
 				Opcode::GetStatic => todo!(),
@@ -439,30 +500,43 @@ impl Interpreter {
 }
 
 mod tests {
-	use std::{collections::{BTreeMap, HashMap}};
+	use std::{collections::{BTreeMap, HashMap}, i32};
 
 	use crate::{
+		class::constant_pool::ConstantPool,
 		isa::opcode::Opcode,
-		vm::interpreter::Interpreter};
+		vm::frame::StackFrame,
+		vm::interpreter::Interpreter,
+		vm::local::Locals,
+		vm::operand_stack::OperandStack,
+		vm::types::*};
 
 	macro_rules! make_arithmetic_logic_test_cases {
 		($rust_type:ty,
+		 $return_type:ident,
 		 $prefix:ident) => {
 		fn ${ concat(run_, $prefix, _, test_cases)}(cases: Vec<($rust_type, $rust_type, Opcode, $rust_type)>) {
 			for case in cases {
-				let mut interpreter = Interpreter::new();
-				let value1 = case.0;
-				let value2 = case.1;
-				let opcode = case.2;
-				let expected = case.3;
-				if vec![Opcode::INeg, Opcode::LNeg, Opcode::FNeg, Opcode::DNeg].contains(&opcode) == false {
-					interpreter.${ concat($prefix, push) }(value2);
-				}
+				let value1 = &case.0;
+				let value2 = &case.1;
+				let opcode = &case.2;
+				let expected = &case.3;
+				let mut interpreter = Interpreter::new(StackFrame {
+					invoker: None,
+					code: vec![opcode.clone() as u8],
+					return_type: Type::$return_type,
+					constant_pool: ConstantPool::new(),
+					operand_stack: OperandStack::new(),
+					locals: Locals { variables: HashMap::new() },
+					pc: 0,
+				});
 				println!("opcode: {:?} value_1: {} value_2: {}", opcode, value1, value2);
-				interpreter.${ concat($prefix, push) }(value1);
-				interpreter.frame.code.push(opcode as u8);
+				if vec![Opcode::INeg, Opcode::LNeg, Opcode::FNeg, Opcode::DNeg].contains(&opcode) == false {
+					interpreter.${ concat($prefix, push) }(*value2);
+				}
+				interpreter.${ concat($prefix, push) }(*value1);
 				interpreter.execute();
-				assert_eq!(interpreter.${ concat($prefix, pop) }(), expected);
+				assert_eq!(interpreter.${ concat($prefix, pop) }(), *expected);
 				}
 			}
 		};
@@ -470,18 +544,28 @@ mod tests {
 
 	macro_rules! make_nan_test_cases {
 		($rust_type:ty,
+		 $return_type:ident,
 		 $prefix:ident) => {
 		fn ${ concat(run_, $prefix, _, nan_test_cases)}(cases: Vec<($rust_type, $rust_type, Opcode)>) {
 			for case in cases {
-				let mut interpreter = Interpreter::new();
 				let value1 = case.0;
 				let value2 = case.1;
 				let opcode = case.2;
+				let mut interpreter = Interpreter::new(StackFrame {
+					invoker: None,
+					code: vec![opcode.clone() as u8],
+					return_type: Type::$return_type,
+					constant_pool: ConstantPool::new(),
+					operand_stack: OperandStack::new(),
+					locals: Locals { variables: HashMap::new() },
+					pc: 0,
+				});
 				if vec![Opcode::FNeg, Opcode::DNeg].contains(&opcode) == false {
 					interpreter.${ concat($prefix, push) }(value2);
 				}
 				println!("opcode: {:?} value_1: {} value_2: {}", opcode, value1, value2);
 				interpreter.${ concat($prefix, push) }(value1);
+				interpreter.${ concat($prefix, push) }(value2);
 				interpreter.frame.code.push(opcode as u8);
 				interpreter.execute();
 				assert!((interpreter.${ concat($prefix, pop) }()).is_nan());
@@ -490,12 +574,53 @@ mod tests {
 		};
 	}
 
-	make_arithmetic_logic_test_cases!(i32, i);
-	make_arithmetic_logic_test_cases!(i64, l);
-	make_arithmetic_logic_test_cases!(f32, f);
-	make_arithmetic_logic_test_cases!(f64, d);
-	make_nan_test_cases!(f32, f);
-	make_nan_test_cases!(f64, d);
+	macro_rules! make_return_test_cases {
+		($rust_type:ty,
+		 $return_type:ident,
+		 $jvm_type:ident,
+		 $prefix:ident) => {
+			fn ${ concat(run_, $prefix, return_, test_cases) }(cases: Vec<(Opcode, $jvm_type)>) {
+				for case in cases {
+					let opcode = case.0 as u8;
+					let return_value = case.1;
+					let mut interpreter = Interpreter::new(StackFrame {
+						invoker: None,
+						code: vec![
+							opcode,
+						],
+						return_type: Type::$return_type,
+						constant_pool: ConstantPool::new(),
+						operand_stack: OperandStack::new(),
+						locals: Locals { variables: HashMap::new() },
+						pc: 0,
+					});
+					println!("opcode: {:?} expected value: {:?}", opcode, return_value);
+					interpreter.${ concat($prefix, push) }(return_value.value);
+					let ret = interpreter.execute();
+					let expected = return_value;
+					assert_eq!(ret.unwrap(), Variable::$jvm_type(expected));
+				}
+			}
+		};
+	}
+
+	make_arithmetic_logic_test_cases!(i32, I, i);
+	make_arithmetic_logic_test_cases!(i64, J, l);
+	make_arithmetic_logic_test_cases!(f32, F, f);
+	make_arithmetic_logic_test_cases!(f64, D, d);
+	make_nan_test_cases!(f32, F, f);
+	make_nan_test_cases!(f64, D, d);
+	make_return_test_cases!(i32, I, Int, i);
+
+	#[test]
+	fn test_int_return() {
+		let i_cases: Vec<(Opcode, Int)> = vec![
+			(Opcode::IReturn, Int { value: 32 }),
+			(Opcode::IReturn, Int { value: -1 }),
+			(Opcode::IReturn, Int { value: i32::MAX }),
+		];
+		run_ireturn_test_cases(i_cases);
+	}
 
 	#[test]
 	fn test_int_operations() {
@@ -628,7 +753,8 @@ mod tests {
 			let opcode = case.0 as u8;
 			let value = &case.1;
 			let expected_pc = case.2;
-			let mut interpreter = Interpreter::new();
+			let frame = StackFrame::new();
+			let mut interpreter = Interpreter::new(frame);
 			interpreter.ipush(*value);
 			interpreter.frame.code = vec![
 				opcode, // 0
@@ -636,7 +762,7 @@ mod tests {
 				16u8, // 2
 				Opcode::Nop as u8 // 3
 			];
-			interpreter.execute();
+			let _ = interpreter.execute();
 			assert_eq!(interpreter.frame.pc, expected_pc);
 		}
 	}
@@ -670,7 +796,8 @@ mod tests {
 			let value_1 = &case.1;
 			let value_2 = &case.2;
 			let expected_pc = case.3;
-			let mut interpreter = Interpreter::new();
+			let frame = StackFrame::new();
+			let mut interpreter = Interpreter::new(frame);
 			interpreter.ipush(*value_2);
 			interpreter.ipush(*value_1);
 			interpreter.frame.code = vec![
@@ -679,7 +806,7 @@ mod tests {
 				16u8, // 2
 				Opcode::Nop as u8 // 3
 			];
-			interpreter.execute();
+			let _ = interpreter.execute();
 			assert_eq!(interpreter.frame.pc, expected_pc);
 		}
 	}
@@ -714,12 +841,13 @@ mod tests {
 			let value_1 = &case.1;
 			let value_2 = &case.2;
 			let expected = case.3;
-			let mut interpreter = Interpreter::new();
+			let frame = StackFrame::new();
+			let mut interpreter = Interpreter::new(frame);
 			interpreter.fpush(*value_2);
 			interpreter.fpush(*value_1);
 			interpreter.frame.code = vec![opcode];
 			println!("opcode: {:?} value_1: {} value_2: {}", Opcode::try_from(opcode).unwrap(), value_1, value_2);
-			interpreter.execute();
+			let _ = interpreter.execute();
 			assert_eq!(interpreter.ipop(), expected);
 		}
 	}
@@ -754,7 +882,8 @@ mod tests {
 			let value_1 = &case.1;
 			let value_2 = &case.2;
 			let expected = case.3;
-			let mut interpreter = Interpreter::new();
+			let frame = StackFrame::new();
+			let mut interpreter = Interpreter::new(frame);
 			interpreter.dpush(*value_2);
 			interpreter.dpush(*value_1);
 			println!("opcode: {:?} value_1: {} value_2: {}", Opcode::try_from(opcode).unwrap(), value_1, value_2);

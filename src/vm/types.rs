@@ -1,5 +1,21 @@
 use strum_macros::Display;
 
+#[derive(Clone, Debug, Default, Display, PartialEq)]
+pub enum Type {
+	Z, // boolean
+	B, // byte
+	C, // char
+	D, // double
+	F, // float
+	I, // int
+	L(String), // object
+	J, // long
+	S, // short
+	A, // array dimension
+	#[default]
+	V, // void
+}
+
 #[derive(Clone, Debug, Display, PartialEq)]
 pub enum Variable {
 	Boolean(Boolean),
@@ -13,7 +29,17 @@ pub enum Variable {
 	ClassReference(ClassReference),
 	ArrayReference(ArrayReference),
 	ReturnAddress(ReturnAddress),
+	Void(Void),
 }
+
+impl Default for Variable {
+	fn default() -> Self {
+		Variable::Void(Void {})
+	}
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Void {}
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Boolean {

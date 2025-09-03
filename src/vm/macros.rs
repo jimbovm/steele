@@ -213,3 +213,19 @@ macro_rules! make_float_comparisons {
 		}
 	};
 }
+
+/// Generate return opcode implementations.
+#[macro_export]
+macro_rules! make_return {
+	($prefix:ident,
+	 $rust_type:ty,
+	 $jvm_type:ident,
+	 $return_type:ident) => {
+		pub fn ${ concat($prefix, "return") }(&mut self) -> Result<Variable, Box<dyn Error>> {
+			if self.frame.return_type == Type::$return_type {
+				return Ok(Variable::$jvm_type($jvm_type { value: self.${ concat($prefix, "pop") }() }));
+			}
+			return Err(Box::new(ExecutionError::BadReturnType(Type::I, self.frame.return_type.clone())));
+		}
+	};
+}
