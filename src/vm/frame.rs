@@ -1,14 +1,12 @@
-use std::{any::Any, collections::HashMap};
+use std::collections::HashMap;
 
 use crate::{
 	class::constant_pool::ConstantPool,
 	vm::{
 		local::Locals,
 		operand_stack::OperandStack,
-		types::{
-			Type, Variable, Void}
-		}
-	};
+		types::Type},
+};
 
 #[derive(Debug, Default)]
 pub struct StackFrame {

@@ -500,7 +500,9 @@ impl Interpreter {
 }
 
 mod tests {
-	use std::{collections::{BTreeMap, HashMap}, i32};
+	use std::{
+		collections::HashMap,
+		error::Error};
 
 	use crate::{
 		class::constant_pool::ConstantPool,
@@ -579,9 +581,10 @@ mod tests {
 		 $return_type:ident,
 		 $jvm_type:ident,
 		 $prefix:ident) => {
-			fn ${ concat(run_, $prefix, return_, test_cases) }(cases: Vec<(Opcode, $jvm_type)>) {
+			fn ${ concat(run_, $prefix, return_, test_cases) }(cases: Vec<(Opcode, $jvm_type, bool)>) {
 				for case in cases {
 					let opcode = case.0 as u8;
+					let incorrect_type = case.2;
 					let return_value = case.1;
 					let mut interpreter = Interpreter::new(StackFrame {
 						invoker: None,
@@ -596,9 +599,14 @@ mod tests {
 					});
 					println!("opcode: {:?} expected value: {:?}", opcode, return_value);
 					interpreter.${ concat($prefix, push) }(return_value.value);
-					let ret = interpreter.execute();
+					let ret: Result<Variable, Box<dyn Error>> = interpreter.execute();
 					let expected = return_value;
-					assert_eq!(ret.unwrap(), Variable::$jvm_type(expected));
+					if incorrect_type {
+						assert_eq!(ret.unwrap_or(NULL), NULL);
+					}
+					else {
+						assert_eq!(ret.unwrap(), Variable::$jvm_type(expected));
+					}
 				}
 			}
 		};
@@ -611,15 +619,28 @@ mod tests {
 	make_nan_test_cases!(f32, F, f);
 	make_nan_test_cases!(f64, D, d);
 	make_return_test_cases!(i32, I, Int, i);
+	make_return_test_cases!(i64, J, Long, l);
 
 	#[test]
 	fn test_int_return() {
-		let i_cases: Vec<(Opcode, Int)> = vec![
-			(Opcode::IReturn, Int { value: 32 }),
-			(Opcode::IReturn, Int { value: -1 }),
-			(Opcode::IReturn, Int { value: i32::MAX }),
+		let i_cases: Vec<(Opcode, Int, bool)> = vec![
+			(Opcode::IReturn, Int { value: 32 }, false),
+			(Opcode::IReturn, Int { value: -1 }, false),
+			(Opcode::IReturn, Int { value: i32::MAX }, false),
+			(Opcode::LReturn, Int { value: 0 }, true),
+			(Opcode::FReturn, Int { value: 0 }, true),
 		];
 		run_ireturn_test_cases(i_cases);
+	}
+
+	#[test]
+	fn test_long_return() {
+		let l_cases: Vec<(Opcode, Long, bool)> = vec![
+			(Opcode::LReturn, Long { value: 32 }, false),
+			(Opcode::LReturn, Long { value: -1 }, false),
+			(Opcode::LReturn, Long { value: i64::MAX }, false),
+		];
+		run_lreturn_test_cases(l_cases);
 	}
 
 	#[test]

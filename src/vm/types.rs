@@ -1,4 +1,8 @@
+use std::str::FromStr;
+
 use strum_macros::Display;
+
+use crate::class::class::Class;
 
 #[derive(Clone, Debug, Default, Display, PartialEq)]
 pub enum Type {
@@ -29,17 +33,14 @@ pub enum Variable {
 	ClassReference(ClassReference),
 	ArrayReference(ArrayReference),
 	ReturnAddress(ReturnAddress),
-	Void(Void),
+	Null(Null),
 }
 
 impl Default for Variable {
 	fn default() -> Self {
-		Variable::Void(Void {})
+		Variable::Null(Null {})
 	}
 }
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct Void {}
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Boolean {
@@ -83,7 +84,7 @@ pub struct Short {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ClassReference {
-	pub class_name: String,
+	pub value: String,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -96,3 +97,7 @@ pub struct ArrayReference {
 pub struct ReturnAddress {
 	pub value: u32,
 }
+
+#[derive(Clone, Debug, PartialEq)]
+struct Null {}
+pub const NULL: Variable = Variable::Null(Null {});
